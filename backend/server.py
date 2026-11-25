@@ -139,7 +139,8 @@ async def lifespan(app: FastAPI):
     ensure_default_admin_user()
     ensure_default_enrollment_token()
     live_vector_store.load()
-    asyncio.create_task(asyncio.to_thread(_startup_warmup))
+    if os.environ.get("LAZY_EMBEDDINGS", "false").lower() not in ("1", "true", "yes"):
+        asyncio.create_task(asyncio.to_thread(_startup_warmup))
     db_mode = "PostgreSQL" if is_postgres() else "SQLite"
     print(f"[Backend] Database initialized ({db_mode}). Admin Key ready (length={len(admin_key)}). Offline timeout={OFFLINE_TIMEOUT_SECONDS}s")
     watchdog_task = asyncio.create_task(heartbeat_watchdog_loop())
