@@ -171,6 +171,47 @@ def compute_hardware_trend_forecast(telemetry_history: List[Dict[str, Any]]) -> 
     }
 
 
+def _lightweight_384_embed(texts: List[str]) -> np.ndarray:
+    """
+    Low-memory (~2 MB RAM) 384-dim L2-normalized word+trigram hash embeddings for 512 MB cloud containers.
+    Compatible with FAISS IndexFlatIP(384) when PyTorch/SentenceTransformer exceeds container RAM limits.
+    """
+    vecs = np.zeros((len(texts), EMBEDDING_DIMENSION), dtype=np.float32)
+    for row_idx, text in enumerate(texts):
+        clean = (text or "").lower()
+        tokens = re.findall(r"[a-z0-9_]+", clean)
+        grams = list(tokens)
+        for t in tokens:
+            if len(t) >= 4:
+                grams.extend(t[i : i + 3] for i in range(len(t) - 2))
+        if not grams:
+            grams = [clean or "empty"]
+        for g in grams:
+            digest = hashlib.blake2b(g.encode("utf-8"), digest_size=8).digest()
+            val = int.from_bytes(digest, "little")
+            bucket = val % EMBEDDING_DIMENSION
+            sign = 1.0 if ((val >> 16) & 1) == 0 else -1.0
+            vecs[row_idx, bucket] += sign
+        norm = float(np.linalg.norm(vecs[row_idx]))
+        if norm > 0.0:
+            vecs[row_idx] /= norm
+    return vecs
+
+
+def _is_low_memory_mode() -> bool:
+    return os.environ.get("LOW_MEMORY_MODE", "false").strip().lower() in ("1", "true", "yes")
+
+
+def _encode_texts(texts: List[str]) -> np.ndarray:
+    if not texts:
+        return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+    if _is_low_memory_mode():
+        return _lightweight_384_embed(texts)
+    model = LogEmbeddingEngine.get_model()
+    embs = model.encode(texts, batch_size=8, show_progress_bar=False, normalize_embeddings=True)
+    return np.asarray(embs, dtype=np.float32)
+
+
 class PersistentLiveVectorStore:
     """
     Thread-safe live FAISS vector index backed by disk files for cross-restart historical similarity search.
@@ -230,7 +271,21 @@ class PersistentLiveVectorStore:
             if not new_records:
                 return 0
             try:
-                embeddings, meta_records = LogEmbeddingEngine.embed_logs(new_records)
+                if _is_low_memory_mode():
+                    texts = [LogEmbeddingEngine.format_log_for_embedding(r) for r in new_records]
+                    embeddings = _lightweight_384_embed(texts)
+                    meta_records = new_records
+                else:
+                    try:
+                        embeddings, meta_records = LogEmbeddingEngine.embed_logs(new_records, batch_size=8)
+                    except Exception as model_exc:
+                        logging.getLogger("backend.ai_pipeline").warning(
+                            "SentenceTransformer unavailable (%s); falling back to lightweight 384-dim embeddings.",
+                            model_exc,
+                        )
+                        texts = [LogEmbeddingEngine.format_log_for_embedding(r) for r in new_records]
+                        embeddings = _lightweight_384_embed(texts)
+                        meta_records = new_records
             except Exception as exc:
                 logging.getLogger("backend.ai_pipeline").exception("FAISS embedding failed: %s", exc)
                 return 0
@@ -274,7 +329,13 @@ class PersistentLiveVectorStore:
             if self.index.ntotal == 0 or not self.metadata:
                 return {"query": clean, "status": "INDEX_EMPTY", "total_matches": 0, "results": [], "disclaimer": SIMILARITY_DISCLAIMER}
             try:
-                q_vec = LogEmbeddingEngine.embed_query(clean)
+                if _is_low_memory_mode():
+                    q_vec = _lightweight_384_embed([clean])
+                else:
+                    try:
+                        q_vec = LogEmbeddingEngine.embed_query(clean)
+                    except Exception:
+                        q_vec = _lightweight_384_embed([clean])
             except Exception as e:
                 return {"query": clean, "status": "ERROR", "total_matches": 0, "results": [], "message": str(e), "disclaimer": SIMILARITY_DISCLAIMER}
             if q_vec is None:
@@ -673,7 +734,11 @@ class LiveAIProcessor:
 
         vs = FaissVectorStore()
         try:
-            embs, recs = LogEmbeddingEngine.embed_logs(df)
+            if _is_low_memory_mode():
+                recs = df.to_dict(orient="records")
+                embs = _encode_texts([LogEmbeddingEngine.format_log_for_embedding(r) for r in recs])
+            else:
+                embs, recs = LogEmbeddingEngine.embed_logs(df, batch_size=8)
             if embs.size > 0:
                 vs.build_index(embs, recs)
         except Exception:

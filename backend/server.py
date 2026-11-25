@@ -139,7 +139,11 @@ async def lifespan(app: FastAPI):
     ensure_default_admin_user()
     ensure_default_enrollment_token()
     live_vector_store.load()
-    if os.environ.get("LAZY_EMBEDDINGS", "false").lower() not in ("1", "true", "yes"):
+    if os.environ.get("LOW_MEMORY_MODE", "false").lower() in ("1", "true", "yes"):
+        rebuilt = live_vector_store.rebuild_from_db_if_empty()
+        if rebuilt:
+            print(f"[Backend] Rebuilt {rebuilt} lightweight FAISS vectors from persisted database.")
+    elif os.environ.get("LAZY_EMBEDDINGS", "false").lower() not in ("1", "true", "yes"):
         asyncio.create_task(asyncio.to_thread(_startup_warmup))
     db_mode = "PostgreSQL" if is_postgres() else "SQLite"
     print(f"[Backend] Database initialized ({db_mode}). Admin Key ready (length={len(admin_key)}). Offline timeout={OFFLINE_TIMEOUT_SECONDS}s")
@@ -332,10 +336,12 @@ async def ingest_logs(
     indexed_count = 0
     ai_state = None
     if inserted:
-        indexed_count = await asyncio.to_thread(ai_processor.index_new_events, inserted)
         latest_tel = await asyncio.to_thread(get_latest_telemetry, device["device_id"])
         ai_state = await asyncio.to_thread(ai_processor.evaluate_device_ai_state, device, latest_tel)
         await _notify_new_critical_incidents(device, ai_state)
+        # Index into FAISS asynchronously so log ingestion returns immediately without HTTP timeout
+        asyncio.create_task(asyncio.to_thread(ai_processor.index_new_events, inserted))
+        indexed_count = len(inserted)
 
         await stream_manager.broadcast("NEW_LOGS", {
             "device_id": device["device_id"],

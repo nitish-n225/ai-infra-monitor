@@ -40,7 +40,7 @@ class AgentConfig:
     )
     watched_log_paths: List[str] = field(default_factory=list)
     initial_event_lookback: int = 20
-    request_timeout_sec: int = 15
+    request_timeout_sec: int = 30
     verify_tls: bool = True
     ca_cert_path: str = ""
     agent_log_path: str = ""
