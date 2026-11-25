@@ -1,0 +1,28 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Secrets & Credentials (NEVER commit to GitHub)
+.env
+.streamlit/secrets.toml
+data/.admin_key
+data/.jwt_secret
+
+# Local Databases, FAISS Indexes & Agent Runtime State
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/faiss_live/
+agent/agent_config.json
+agent/agent_state.*
+agent/*.log
+
+# Build Artifacts
+dist/
+build/
+*.spec
+

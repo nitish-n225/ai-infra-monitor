@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisLog | Intelligent Log Anomaly & Threat Detection System</title>
+  <meta name="description" content="College Mini Project - Intelligent Real-Time Log Threat and Anomaly Detection System powered by Rule-Based Signatures and Machine Learning Isolation Forest.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <!-- Background ambient glow -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">AegisLog <span class="badge-tag">SIEM v1.0</span></h1>
+        <p class="brand-subtitle">Intelligent Log Anomaly & Cyber Threat Detection System</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div id="connectionStatus" class="status-pill connected">
+        <span class="status-dot"></span>
+        <span id="connectionText">LIVE MONITORING</span>
+      </div>
+      <button id="toggleStreamBtn" class="btn btn-outline" title="Pause or Resume background traffic generation">
+        <span class="btn-icon">⏸</span> Pause Stream
+      </button>
+      <button id="clearDataBtn" class="btn btn-danger-outline" title="Clear all logs and alerts for a fresh presentation demo">
+        <span class="btn-icon">🗑</span> Reset Demo
+      </button>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+    <!-- Quick Attack Simulation Bar (College Viva Demonstration) -->
+    <section class="simulation-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-icon">⚡</span>
+          <div>
+            <h2 class="panel-title">Interactive Attack Simulator (Live Evaluation Demo)</h2>
+            <p class="panel-hint">Click any attack below to inject payloads and watch the hybrid detection engine catch it in real time!</p>
+          </div>
+        </div>
+      </div>
+      <div class="sim-buttons-grid">
+        <button class="sim-btn sim-sqli" data-attack="sqli" id="btnSimSqli">
+          <span class="sim-tag">CRITICAL</span>
+          <span class="sim-name">💉 SQL Injection</span>
+          <span class="sim-desc">UNION SELECT / OR 1=1</span>
+        </button>
+        <button class="sim-btn sim-xss" data-attack="xss" id="btnSimXss">
+          <span class="sim-tag">HIGH</span>
+          <span class="sim-name">⚡ Cross-Site Scripting</span>
+          <span class="sim-desc">&lt;script&gt; / onerror payload</span>
+        </button>
+        <button class="sim-btn sim-brute" data-attack="brute_force" id="btnSimBrute">
+          <span class="sim-tag">CRITICAL</span>
+          <span class="sim-name">🔒 Brute Force</span>
+          <span class="sim-desc">Rapid 401 failed logins</span>
+        </button>
+        <button class="sim-btn sim-traversal" data-attack="path_traversal" id="btnSimTraversal">
+          <span class="sim-tag">HIGH</span>
+          <span class="sim-name">📁 Path Traversal</span>
+          <span class="sim-desc">../../etc/passwd traversal</span>
+        </button>
+        <button class="sim-btn sim-recon" data-attack="recon" id="btnSimRecon">
+          <span class="sim-tag">MEDIUM</span>
+          <span class="sim-name">🔍 Recon Probe</span>
+          <span class="sim-desc">Probing .env / .git / admin</span>
+        </button>
+        <button class="sim-btn sim-dos" data-attack="dos" id="btnSimDos">
+          <span class="sim-tag">CRITICAL</span>
+          <span class="sim-name">🌊 DDoS Flood</span>
+          <span class="sim-desc">Burst rate volume spike</span>
+        </button>
+        <button class="sim-btn sim-normal" data-attack="normal" id="btnSimNormal">
+          <span class="sim-tag">NORMAL</span>
+          <span class="sim-name">🟢 Benign Traffic</span>
+          <span class="sim-desc">Standard user browsing</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Metrics KPI Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card" id="kpiTotalLogs">
+        <div class="kpi-header">
+          <span class="kpi-label">TOTAL LOGS ANALYZED</span>
+          <span class="kpi-icon-wrap icon-cyan">📊</span>
+        </div>
+        <div class="kpi-value" id="valTotalLogs">0</div>
+        <div class="kpi-subtext">Continuous real-time ingestion</div>
+      </div>
+
+      <div class="kpi-card" id="kpiThreatLogs">
+        <div class="kpi-header">
+          <span class="kpi-label">THREATS IDENTIFIED</span>
+          <span class="kpi-icon-wrap icon-red">🛡️</span>
+        </div>
+        <div class="kpi-value value-danger" id="valThreatLogs">0</div>
+        <div class="kpi-subtext" id="valThreatPercent">0% of total traffic</div>
+      </div>
+
+      <div class="kpi-card" id="kpiActiveAlerts">
+        <div class="kpi-header">
+          <span class="kpi-label">ACTIVE SECURITY ALERTS</span>
+          <span class="kpi-icon-wrap icon-amber">🚨</span>
+        </div>
+        <div class="kpi-value value-warning" id="valActiveAlerts">0</div>
+        <div class="kpi-subtext" id="valCriticalAlerts">0 Critical Incidents</div>
+      </div>
+
+      <div class="kpi-card" id="kpiEngineStatus">
+        <div class="kpi-header">
+          <span class="kpi-label">AI ISOLATION FOREST</span>
+          <span class="kpi-icon-wrap icon-purple">🧠</span>
+        </div>
+        <div class="kpi-value value-purple" id="valEngineStatus">ONLINE</div>
+        <div class="kpi-subtext">Unsupervised Anomaly Model Ready</div>
+      </div>
+    </section>
+
+    <!-- Visual Analytics: Charts Section -->
+    <section class="charts-grid">
+      <div class="glass-card chart-container">
+        <div class="card-header">
+          <h3 class="card-title">Threat Classification Breakdown</h3>
+          <span class="card-badge">Rule + AI</span>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="threatDistributionChart"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-card chart-container">
+        <div class="card-header">
+          <h3 class="card-title">Real-Time Ingestion Velocity</h3>
+          <span class="card-badge live-pulse-badge">Live Stream</span>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="trafficVelocityChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Split: Live Alert Feed & Log Explorer -->
+    <section class="split-content-grid">
+      <!-- Security Alerts Feed -->
+      <div class="glass-card alerts-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="card-title">Security Incidents & Triggered Alerts</h3>
+            <span class="badge-count" id="alertsCountBadge">0</span>
+          </div>
+        </div>
+        <div class="alerts-feed-list" id="alertsFeedList">
+          <div class="empty-state">
+            <span class="empty-icon">🛡️</span>
+            <p>No active threats detected. System is secure.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Log Explorer Table -->
+      <div class="glass-card logs-card">
+        <div class="card-header flex-wrap">
+          <h3 class="card-title">Real-Time Log Stream</h3>
+          <div class="log-controls">
+            <input type="text" id="logSearchInput" class="search-input" placeholder="Filter by IP, endpoint, status...">
+            <label class="toggle-label">
+              <input type="checkbox" id="threatsOnlyToggle">
+              <span>Threats Only</span>
+            </label>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Client IP</th>
+                <th>Method</th>
+                <th>Endpoint & Query</th>
+                <th>Status</th>
+                <th>Threat Classification</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Project Info Footer (Perfect for college presentation) -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p><strong>AegisLog SIEM</strong> | Department of Computer Science & Engineering - Mini Project</p>
+      <p>Architecture: Regex Signature Matcher • Stateful Sliding Rate Limiter • Scikit-Learn Isolation Forest • FastAPI</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+2026-10-25 10:00:01.102 [INFO] [ingress-gateway] Ingress healthy. 248 active connections.
+2026-10-25 10:00:05.412 [INFO] [auth-service] Token verification latency avg 12ms.
+2026-10-25 10:00:10.890 [INFO] [db-postgres] Active client pool: 14/50 connections.
+2026-10-25 10:01:15.220 [WARN] [cache-redis-01] Memory utilization reached 84.6% of quota.
+2026-10-25 10:01:45.310 [WARN] [cache-redis-01] Eviction policy VOLATILE-LRU triggered for 1200 keys.
+2026-10-25 10:02:10.512 [WARN] [k8s-node-worker-2] Node memory pressure flag set. Free: 180MB.
+2026-10-25 10:02:30.104 [ERROR] [cache-redis-01] OOM command not allowed when used memory > 'maxmemory'.
+2026-10-25 10:02:40.892 [ERROR] [session-service] Redis connection timeout after 3000ms. Falling back to DB.
+2026-10-25 10:03:00.120 [WARN] [db-postgres] Connection pool surged to 48/50. Waiting queue size: 84.
+2026-10-25 10:03:15.430 [CRITICAL] [db-postgres] FATAL: remaining connection slots reserved for non-replication superuser.
+2026-10-25 10:03:22.810 [ERROR] [auth-service] PG::ConnectionBad: could not connect to server: Connection refused.
+2026-10-25 10:03:35.012 [ERROR] [api-gateway] Upstream 504 Gateway Timeout on POST /api/v1/auth/login.
+2026-10-25 10:03:45.560 [CRITICAL] [circuit-breaker] Circuit state transitioned to OPEN for target 'auth-service'.
+2026-10-25 10:04:00.102 [FATAL] [k8s-kubelet] Pod auth-service-7f89d-4x1z terminated: OOMKilled (Exit code 137).
+2026-10-25 10:04:15.890 [WARN] [k8s-controller] Back-off 10s restarting failed container auth-service.
+2026-10-25 10:04:45.210 [INFO] [sre-autoscaler] Triggering emergency replica spin-up for auth-service (target: 4).
+2026-10-25 10:05:10.450 [INFO] [cache-redis-01] Memory flush completed by automated watchdog script.
+2026-10-25 10:05:30.820 [INFO] [db-postgres] Connection pool normalized to 18/50 connections.
+2026-10-25 10:06:00.010 [INFO] [circuit-breaker] Circuit state transitioned to HALF-OPEN. Probing auth-service.
+2026-10-25 10:06:20.550 [INFO] [circuit-breaker] Circuit state transitioned to CLOSED. Traffic normalized.
+2026-10-25 10:06:30.100 [INFO] [ingress-gateway] Ingress request error rate dropped to 0.02%.

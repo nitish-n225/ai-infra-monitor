@@ -1,0 +1,21 @@
+# Core Dependencies for Enterprise Autonomous AI Infrastructure Monitoring System
+streamlit>=1.32.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Central Backend & Real-Time Streaming
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pydantic>=2.7.0
+PyJWT>=2.8.0
+psycopg2-binary>=2.9.9
+websockets>=13.0
+requests>=2.31.0
+
+# Stage 3 Dependencies (Semantic Search & Vector Indexing)
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+
+# Windows Monitoring Agent Dependencies
+psutil>=5.9.8
+pywin32>=306; sys_platform == "win32"

@@ -1,0 +1,48 @@
+databases:
+  - name: ai-monitor-db
+    databaseName: ai_monitor
+    user: ai_monitor_user
+    plan: free
+
+services:
+  - type: web
+    name: ai-monitor-backend
+    runtime: python
+    plan: starter
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    buildCommand: pip install --upgrade pip && pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+    startCommand: uvicorn backend.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-monitor-db
+          property: connectionString
+      - key: MONITOR_ADMIN_KEY
+        generateValue: true
+      - key: MONITOR_JWT_SECRET
+        generateValue: true
+      - key: MONITOR_ADMIN_USER
+        value: admin
+      - key: MONITOR_ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: DEVICE_OFFLINE_SECONDS
+        value: "30"
+      - key: EVENT_RETENTION_DAYS
+        value: "30"
+      - key: TELEMETRY_RETENTION_DAYS
+        value: "14"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"
+
