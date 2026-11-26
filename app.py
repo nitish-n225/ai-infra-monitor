@@ -276,7 +276,7 @@ if data_mode == "Live Fleet":
                                         </span>
                                         <span style="color:#10b981; font-weight:700;">{esc(item['similarity_pct'])}% Match</span>
                                     </div>
-                                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#f1f5f9; margin-top:0.3rem;">
+                                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#0f172a; margin-top:0.3rem;">
                                         {esc(item['message'])}
                                     </div>
                                     <div style="font-size:0.72rem; color:#64748b; margin-top:0.2rem;">

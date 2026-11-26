@@ -15,33 +15,34 @@ def esc(value: Any) -> str:
 
 
 def apply_custom_styles() -> None:
-    """Applies a MotionSites.ai-inspired cinematic motion design system (fluid shader backdrop, film grain, staggered kinetic reveals, Border Beam, Meteors & glassmorphism)."""
+    """Applies a bright White UI Magic UI + MotionSites Studio frosted pearl design system."""
     st.markdown(
         """
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         :root {
-            --bg-root: #040408;
-            --bg-surface: rgba(11, 12, 20, 0.78);
-            --bg-surface-strong: rgba(7, 8, 14, 0.94);
-            --border-subtle: rgba(255, 255, 255, 0.10);
-            --border-magic: rgba(156, 64, 255, 0.45);
-            --border-accent: rgba(56, 189, 248, 0.52);
-            --text-primary: #fafafa;
-            --text-muted: #a1a1aa;
-            --magic-amber: #ffaa40;
-            --magic-purple: #9c40ff;
-            --accent-cyan: #38bdf8;
-            --accent-indigo: #a78bfa;
-            --accent-emerald: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-rose: #ef4444;
+            --bg-root: #ffffff;
+            --bg-surface: rgba(255, 255, 255, 0.86);
+            --bg-surface-strong: rgba(248, 250, 252, 0.96);
+            --border-subtle: rgba(15, 23, 42, 0.09);
+            --border-magic: rgba(99, 102, 241, 0.36);
+            --border-accent: rgba(14, 165, 233, 0.42);
+            --text-primary: #0f172a;
+            --text-muted: #475569;
+            --magic-amber: #f59e0b;
+            --magic-purple: #6366f1;
+            --accent-cyan: #0284c7;
+            --accent-indigo: #4f46e5;
+            --accent-emerald: #059669;
+            --accent-amber: #d97706;
+            --accent-rose: #dc2626;
         }
 
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             font-style: normal;
+            color: var(--text-primary);
         }
 
         /* Clean Streamlit chrome */
@@ -60,7 +61,7 @@ def apply_custom_styles() -> None:
         }
 
         @keyframes motionEntrance {
-            0%   { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.985); }
+            0%   { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.988); }
             100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
 
@@ -70,9 +71,9 @@ def apply_custom_styles() -> None:
         }
 
         @keyframes magicAurora {
-            0%   { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
-            50%  { transform: translate3d(3%, 2.5%, 0) rotate(3deg) scale(1.08); }
-            100% { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
+            0%   { transform: translate3d(-2.5%, -1.5%, 0) rotate(0deg) scale(1); }
+            50%  { transform: translate3d(2.5%, 2%, 0) rotate(2deg) scale(1.06); }
+            100% { transform: translate3d(-2.5%, -1.5%, 0) rotate(0deg) scale(1); }
         }
 
         @keyframes magicBorderBeamAngle {
@@ -80,14 +81,9 @@ def apply_custom_styles() -> None:
             100% { --magic-angle: 360deg; }
         }
 
-        @keyframes magicShinySweep {
-            0%   { background-position: -180% 0; }
-            100% { background-position: 180% 0; }
-        }
-
         @keyframes magicMeteorFall {
-            0%   { transform: rotate(215deg) translateX(0); opacity: 1; }
-            70%  { opacity: 1; }
+            0%   { transform: rotate(215deg) translateX(0); opacity: 0.9; }
+            70%  { opacity: 0.85; }
             100% { transform: rotate(215deg) translateX(-680px); opacity: 0; }
         }
 
@@ -98,11 +94,11 @@ def apply_custom_styles() -> None:
 
         @keyframes motionMeshShift {
             0%   { background-position: 0% 20%, 100% 0%, 50% 80%, 0 0; }
-            50%  { background-position: 20% 35%, 80% 15%, 45% 65%, 0 0; }
+            50%  { background-position: 18% 32%, 82% 14%, 46% 68%, 0 0; }
             100% { background-position: 0% 20%, 100% 0%, 50% 80%, 0 0; }
         }
 
-        /* Hide layout footprint for fixed ambient MotionSites film-grain & meteor layer */
+        /* Hide layout footprint for fixed ambient meteor layer */
         .stElementContainer:has(.magic-bg-layer),
         div[data-testid="stMarkdownContainer"]:has(.magic-bg-layer) {
             margin: 0 !important;
@@ -112,32 +108,32 @@ def apply_custom_styles() -> None:
             overflow: visible !important;
         }
 
-        /* MotionSites Fluid Shifting Mesh Shader + Dot Matrix Backdrop */
+        /* White UI Pearl Canvas + Magic UI Dot Pattern + Iridescent Light Mesh */
         .stApp {
             position: relative;
-            background-color: #040408;
+            background-color: #ffffff;
             background-image:
-                radial-gradient(ellipse 74% 50% at 14% -5%, rgba(156, 64, 255, 0.22), transparent 60%),
-                radial-gradient(ellipse 68% 50% at 88% 2%, rgba(255, 170, 64, 0.16), transparent 58%),
-                radial-gradient(ellipse 72% 52% at 50% 56%, rgba(56, 189, 248, 0.13), transparent 64%),
-                radial-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1px);
-            background-size: 130% 130%, 130% 130%, 130% 130%, 26px 26px;
-            animation: motionMeshShift 20s ease-in-out infinite;
+                radial-gradient(ellipse 75% 48% at 14% -4%, rgba(99, 102, 241, 0.11), transparent 62%),
+                radial-gradient(ellipse 68% 48% at 88% 2%, rgba(245, 158, 11, 0.10), transparent 60%),
+                radial-gradient(ellipse 72% 52% at 50% 56%, rgba(14, 165, 233, 0.09), transparent 65%),
+                radial-gradient(rgba(15, 23, 42, 0.085) 1px, transparent 1px);
+            background-size: 130% 130%, 130% 130%, 130% 130%, 24px 24px;
+            animation: motionMeshShift 22s ease-in-out infinite;
             overflow-x: hidden;
         }
 
-        /* Subtle Studio Film-Grain Overlay (MotionSites Signature Depth) */
+        /* Subtle Silk Film-Grain Texture for White UI */
         .stApp::after {
             content: "";
             position: fixed;
             inset: 0;
             pointer-events: none;
             z-index: 0;
-            opacity: 0.038;
+            opacity: 0.022;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
         }
 
-        /* Magic UI Retro Grid Perspective Floor */
+        /* Light Architectural Perspective Retro Grid Floor */
         [data-testid="stAppViewContainer"] {
             position: relative;
             overflow-x: hidden;
@@ -148,21 +144,21 @@ def apply_custom_styles() -> None:
             left: -30%;
             right: -30%;
             bottom: -16%;
-            height: 68vh;
+            height: 66vh;
             pointer-events: none;
             z-index: 0;
             background-image:
-                linear-gradient(to right, rgba(156, 64, 255, 0.16) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 170, 64, 0.14) 1px, transparent 1px);
+                linear-gradient(to right, rgba(99, 102, 241, 0.14) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(14, 165, 233, 0.12) 1px, transparent 1px);
             background-size: 64px 64px;
             transform-origin: 50% 100%;
             transform: perspective(580px) rotateX(68deg);
-            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.35) 48%, transparent 82%);
-            mask-image: linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.35) 48%, transparent 82%);
+            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.32) 45%, transparent 78%);
+            mask-image: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.32) 45%, transparent 78%);
             animation: magicRetroGrid 8s linear infinite;
         }
 
-        /* Magic UI Ambient Aurora Glow Layer */
+        /* Soft Pastel Ambient Aurora Halos on White */
         [data-testid="stAppViewContainer"]::after {
             content: "";
             position: fixed;
@@ -170,14 +166,14 @@ def apply_custom_styles() -> None:
             pointer-events: none;
             z-index: 0;
             background:
-                radial-gradient(circle at 20% 22%, rgba(156, 64, 255, 0.14) 0%, transparent 32%),
-                radial-gradient(circle at 80% 24%, rgba(255, 170, 64, 0.12) 0%, transparent 34%),
-                radial-gradient(circle at 50% 78%, rgba(56, 189, 248, 0.11) 0%, transparent 38%);
-            filter: blur(26px);
+                radial-gradient(circle at 18% 20%, rgba(129, 140, 248, 0.14) 0%, transparent 32%),
+                radial-gradient(circle at 82% 24%, rgba(251, 191, 36, 0.11) 0%, transparent 34%),
+                radial-gradient(circle at 50% 80%, rgba(56, 189, 248, 0.12) 0%, transparent 38%);
+            filter: blur(28px);
             animation: magicAurora 17s ease-in-out infinite;
         }
 
-        /* Magic UI Meteors Overlay */
+        /* Light Mode Magic UI Meteors */
         .magic-bg-layer {
             position: fixed;
             inset: 0;
@@ -191,8 +187,8 @@ def apply_custom_styles() -> None:
             width: 2px;
             height: 2px;
             border-radius: 9999px;
-            background: #e2e8f0;
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 10px rgba(156, 64, 255, 0.7);
+            background: #6366f1;
+            box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 8px rgba(14, 165, 233, 0.45);
             opacity: 0;
             animation: magicMeteorFall linear infinite;
         }
@@ -203,7 +199,7 @@ def apply_custom_styles() -> None:
             transform: translateY(-50%);
             width: 68px;
             height: 1px;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(156, 64, 255, 0.45), transparent);
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.65), rgba(14, 165, 233, 0.25), transparent);
         }
 
         .block-container {
@@ -215,54 +211,54 @@ def apply_custom_styles() -> None:
             perspective: 1600px;
         }
 
-        /* Magic UI Bento Sidebar */
+        /* Pure White Pearl Sidebar */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(9, 10, 16, 0.90) 0%, rgba(5, 5, 9, 0.96) 100%);
-            backdrop-filter: blur(22px) saturate(155%);
-            -webkit-backdrop-filter: blur(22px) saturate(155%);
-            border-right: 1px solid rgba(255, 255, 255, 0.10);
-            box-shadow: 16px 0 44px rgba(0, 0, 0, 0.75);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.96) 100%);
+            backdrop-filter: blur(22px) saturate(140%);
+            -webkit-backdrop-filter: blur(22px) saturate(140%);
+            border-right: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 12px 0 36px rgba(15, 23, 42, 0.06);
         }
 
-        /* Magic UI Precision Navigation Tabs */
+        /* Crisp Light Frosted Navigation Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 0.45rem;
-            background: rgba(9, 10, 16, 0.84);
+            background: rgba(241, 245, 249, 0.85);
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             padding: 0.38rem;
             border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(15, 23, 42, 0.08);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                0 14px 32px -10px rgba(0, 0, 0, 0.72);
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                0 10px 26px -10px rgba(15, 23, 42, 0.08);
         }
         .stTabs [data-baseweb="tab"] {
             border-radius: 10px;
             padding: 0.48rem 1.05rem;
             font-weight: 600;
             font-size: 0.85rem;
-            color: var(--text-muted);
+            color: #475569;
             border: 1px solid transparent;
             transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .stTabs [data-baseweb="tab"]:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.05);
+            color: #0f172a;
+            background: rgba(255, 255, 255, 0.65);
         }
         .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, rgba(255, 170, 64, 0.18), rgba(156, 64, 255, 0.22), rgba(56, 189, 248, 0.18)) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(156, 64, 255, 0.52) !important;
+            background: linear-gradient(135deg, #ffffff, rgba(238, 242, 255, 0.96)) !important;
+            color: #312e81 !important;
+            border: 1px solid rgba(99, 102, 241, 0.38) !important;
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.22),
-                0 6px 20px rgba(156, 64, 255, 0.24) !important;
+                inset 0 1px 0 #ffffff,
+                0 6px 16px -4px rgba(79, 70, 229, 0.16) !important;
         }
         .stTabs [data-baseweb="tab-highlight"] {
             display: none;
         }
 
-        /* Magic UI Shimmer Buttons */
+        /* Crisp White Satin Shimmer Buttons */
         .stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
             position: relative;
             overflow: hidden;
@@ -271,12 +267,12 @@ def apply_custom_styles() -> None:
             font-size: 0.8rem;
             padding: 0.34rem 0.78rem;
             min-height: 2.08rem;
-            color: #f4f4f5;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background: linear-gradient(180deg, rgba(24, 24, 34, 0.92), rgba(10, 11, 18, 0.98));
+            color: #0f172a;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.14),
-                0 8px 20px -6px rgba(0, 0, 0, 0.65);
+                inset 0 1px 0 #ffffff,
+                0 4px 12px -4px rgba(15, 23, 42, 0.10);
             transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .stButton > button::before, .stDownloadButton > button::before, .stFormSubmitButton > button::before {
@@ -286,7 +282,7 @@ def apply_custom_styles() -> None:
             left: -120%;
             width: 55%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.16), transparent);
             transform: skewX(-22deg);
             pointer-events: none;
         }
@@ -294,18 +290,19 @@ def apply_custom_styles() -> None:
             animation: magicShimmerBtn 0.75s ease forwards;
         }
         .stButton > button:hover, .stDownloadButton > button:hover, .stFormSubmitButton > button:hover {
-            border-color: rgba(156, 64, 255, 0.62);
+            border-color: rgba(99, 102, 241, 0.45);
+            color: #312e81;
             transform: translateY(-2px);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.24),
-                0 10px 24px -6px rgba(156, 64, 255, 0.32),
-                0 0 16px -4px rgba(255, 170, 64, 0.22);
+                inset 0 1px 0 #ffffff,
+                0 10px 22px -6px rgba(79, 70, 229, 0.20),
+                0 0 12px -4px rgba(14, 165, 233, 0.16);
         }
         .stButton > button:active {
             transform: translateY(0px);
         }
 
-        /* MotionSites Border Beam + Ghost Typography Hero */
+        /* Bright White Border-Beam Hero Header */
         .hero-header {
             position: relative;
             overflow: hidden;
@@ -314,16 +311,18 @@ def apply_custom_styles() -> None:
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            background: radial-gradient(circle at 20% 0%, rgba(156, 64, 255, 0.15), transparent 55%), rgba(9, 10, 16, 0.88);
-            backdrop-filter: blur(22px) saturate(155%);
-            -webkit-backdrop-filter: blur(22px) saturate(155%);
-            border: 1px solid rgba(255, 255, 255, 0.11);
+            background:
+                radial-gradient(circle at 18% 0%, rgba(99, 102, 241, 0.08), transparent 55%),
+                rgba(255, 255, 255, 0.90);
+            backdrop-filter: blur(22px) saturate(140%);
+            -webkit-backdrop-filter: blur(22px) saturate(140%);
+            border: 1px solid rgba(15, 23, 42, 0.08);
             border-radius: 18px;
             padding: 1.25rem 1.55rem;
             margin-bottom: 1.2rem;
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.14),
-                0 24px 56px -16px rgba(0, 0, 0, 0.85);
+                inset 0 1px 0 #ffffff,
+                0 20px 48px -16px rgba(15, 23, 42, 0.12);
             transform-style: preserve-3d;
             animation: motionEntrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
@@ -337,13 +336,13 @@ def apply_custom_styles() -> None:
             font-size: 2.8rem;
             font-weight: 800;
             letter-spacing: 0.04em;
-            color: rgba(255, 255, 255, 0.032);
+            color: rgba(15, 23, 42, 0.035);
             white-space: nowrap;
             pointer-events: none;
             user-select: none;
             z-index: 1;
         }
-        /* Animated Magic UI Border Beam perimeter (#ffaa40 -> #9c40ff -> #38bdf8) */
+        /* Animated Magic UI Border Beam perimeter (#f59e0b -> #6366f1 -> #0ea5e9) */
         .hero-header::before {
             content: "";
             position: absolute;
@@ -353,9 +352,9 @@ def apply_custom_styles() -> None:
             background: conic-gradient(
                 from var(--magic-angle, 0deg),
                 transparent 0deg 255deg,
-                #ffaa40 292deg,
-                #9c40ff 328deg,
-                #38bdf8 352deg,
+                #f59e0b 292deg,
+                #6366f1 328deg,
+                #0ea5e9 352deg,
                 transparent 360deg
             );
             -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -364,79 +363,58 @@ def apply_custom_styles() -> None:
             pointer-events: none;
             animation: magicBorderBeamAngle 7s linear infinite;
         }
-        .magic-eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.16rem 0.68rem;
-            border-radius: 999px;
-            margin-bottom: 0.42rem;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background: rgba(255, 255, 255, 0.04);
-        }
-        .magic-shiny-text {
-            font-size: 0.67rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            background-image: linear-gradient(90deg, #a1a1aa 0%, #ffffff 46%, #ffaa40 54%, #a1a1aa 100%);
-            background-size: 220% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: magicShinySweep 4.5s linear infinite;
-        }
         .hero-title {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             font-style: normal;
             font-size: 1.38rem;
             font-weight: 700;
             letter-spacing: -0.015em;
-            background: linear-gradient(95deg, #ffffff 0%, #ffe6b3 38%, #d8b4fe 72%, #7dd3fc 100%);
+            background: linear-gradient(95deg, #0f172a 0%, #312e81 55%, #0284c7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin: 0;
         }
         .hero-subtitle {
             font-size: 0.84rem;
-            color: #a1a1aa;
+            color: #475569;
             margin-top: 0.22rem;
             letter-spacing: 0.005em;
         }
 
-        /* MotionSites Staggered Bento / Magic Cards */
+        /* Crisp White Magic Bento Cards */
         .metric-card {
             position: relative;
             overflow: hidden;
             background:
-                radial-gradient(220px circle at 50% -20%, rgba(156, 64, 255, 0.14), transparent 70%),
-                linear-gradient(160deg, rgba(16, 17, 26, 0.86), rgba(7, 8, 14, 0.94));
-            backdrop-filter: blur(18px) saturate(145%);
-            -webkit-backdrop-filter: blur(18px) saturate(145%);
-            border: 1px solid rgba(255, 255, 255, 0.10);
+                radial-gradient(220px circle at 50% -20%, rgba(99, 102, 241, 0.07), transparent 70%),
+                rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(18px) saturate(135%);
+            -webkit-backdrop-filter: blur(18px) saturate(135%);
+            border: 1px solid rgba(15, 23, 42, 0.08);
             border-radius: 16px;
             padding: 1.05rem 1.2rem;
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.12),
-                0 20px 42px -14px rgba(0, 0, 0, 0.82);
+                inset 0 1px 0 #ffffff,
+                0 16px 36px -14px rgba(15, 23, 42, 0.10);
             transform-style: preserve-3d;
             animation: motionEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
         }
         .metric-card:hover {
             transform: translateY(-5px) rotateX(2deg) rotateY(-1deg);
-            border-color: rgba(156, 64, 255, 0.48);
+            border-color: rgba(99, 102, 241, 0.38);
             background:
-                radial-gradient(260px circle at 50% 0%, rgba(156, 64, 255, 0.22), rgba(255, 170, 64, 0.08) 45%, transparent 72%),
-                linear-gradient(160deg, rgba(20, 21, 32, 0.90), rgba(8, 9, 16, 0.96));
+                radial-gradient(260px circle at 50% 0%, rgba(99, 102, 241, 0.11), rgba(245, 158, 11, 0.06) 45%, transparent 72%),
+                rgba(255, 255, 255, 0.96);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.22),
-                0 24px 48px -14px rgba(0, 0, 0, 0.88),
-                0 0 28px -8px rgba(156, 64, 255, 0.30);
+                inset 0 1px 0 #ffffff,
+                0 22px 44px -14px rgba(15, 23, 42, 0.14),
+                0 0 24px -8px rgba(99, 102, 241, 0.20);
         }
         .metric-label {
             font-size: 0.69rem;
             font-weight: 700;
-            color: #a1a1aa;
+            color: #475569;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             margin-bottom: 0.36rem;
@@ -445,32 +423,32 @@ def apply_custom_styles() -> None:
             font-size: 1.78rem;
             font-weight: 800;
             font-family: 'JetBrains Mono', monospace;
-            color: var(--text-primary);
+            color: #0f172a;
             line-height: 1.15;
-            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.65);
         }
         .metric-desc {
             font-size: 0.74rem;
-            color: #71717a;
+            color: #64748b;
             margin-top: 0.3rem;
         }
 
-        /* Live Stream Strip */
+        /* White Frosted Live Stream Strip */
         .stream-strip {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
             gap: 0.6rem;
-            background: rgba(10, 11, 18, 0.88);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(156, 64, 255, 0.28);
+            border: 1px solid rgba(99, 102, 241, 0.20);
             border-radius: 13px;
             padding: 0.64rem 1.08rem;
             margin-bottom: 1rem;
             font-size: 0.8rem;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.50);
+            color: #334155;
+            box-shadow: inset 0 1px 0 #ffffff, 0 8px 22px -8px rgba(15, 23, 42, 0.08);
         }
 
         /* 3D Beveled Resource Progress Bar */
@@ -479,22 +457,22 @@ def apply_custom_styles() -> None:
             display: flex;
             justify-content: space-between;
             font-size: 0.74rem;
-            color: #d4d4d8;
+            color: #334155;
             margin-bottom: 0.16rem;
         }
         .res-track {
             width: 100%;
             height: 7px;
             border-radius: 999px;
-            background: rgba(9, 10, 16, 0.94);
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);
+            background: rgba(226, 232, 240, 0.85);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.12);
             overflow: hidden;
         }
         .res-fill {
             height: 100%;
             border-radius: 999px;
-            box-shadow: 0 0 12px currentColor;
+            box-shadow: 0 0 8px currentColor;
             transition: width 0.3s ease;
         }
 
@@ -510,63 +488,64 @@ def apply_custom_styles() -> None:
             font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.05em;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 6px 16px rgba(0, 0, 0, 0.45);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 12px rgba(15, 23, 42, 0.06);
         }
 
-        /* Critical Banner */
+        /* Critical Banner on White */
         .critical-banner {
-            background: linear-gradient(90deg, rgba(239, 68, 68, 0.16), rgba(10, 11, 18, 0.82));
+            background: linear-gradient(90deg, rgba(254, 226, 226, 0.65), rgba(255, 255, 255, 0.92));
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(239, 68, 68, 0.30);
+            border: 1px solid rgba(239, 68, 68, 0.26);
             border-left: 4px solid #ef4444;
             border-radius: 13px;
             padding: 0.88rem 1.1rem;
             margin-bottom: 0.78rem;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 28px -8px rgba(239, 68, 68, 0.26);
+            box-shadow: inset 0 1px 0 #ffffff, 0 10px 24px -10px rgba(239, 68, 68, 0.14);
         }
 
-        /* Expanders, Chat Bubbles & DataFrames */
+        /* Expanders, Chat Bubbles & DataFrames on White */
         [data-testid="stExpander"] {
-            background: rgba(10, 11, 18, 0.82);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid var(--border-subtle) !important;
+            border: 1px solid rgba(15, 23, 42, 0.09) !important;
             border-radius: 13px !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 28px -12px rgba(0, 0, 0, 0.65);
+            box-shadow: inset 0 1px 0 #ffffff, 0 10px 24px -12px rgba(15, 23, 42, 0.08);
         }
         [data-testid="stChatMessage"] {
-            background: linear-gradient(145deg, rgba(16, 17, 26, 0.82), rgba(8, 9, 15, 0.90));
+            background: rgba(255, 255, 255, 0.90);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(15, 23, 42, 0.09);
             border-radius: 14px;
             padding: 0.8rem 1rem;
             margin-bottom: 0.55rem;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 26px -10px rgba(0, 0, 0, 0.58);
+            box-shadow: inset 0 1px 0 #ffffff, 0 10px 24px -12px rgba(15, 23, 42, 0.09);
         }
 
-        /* Compact Magic UI Border-Glow Command Chat Input */
+        /* Compact White Frosted Command Chat Input */
         [data-testid="stChatInput"] {
             max-width: 760px;
             margin: 0.4rem auto 0.3rem auto;
         }
         [data-testid="stChatInput"] > div {
             border-radius: 13px !important;
-            border: 1px solid rgba(156, 64, 255, 0.42) !important;
-            background: rgba(9, 10, 16, 0.90) !important;
-            backdrop-filter: blur(18px) saturate(150%);
-            -webkit-backdrop-filter: blur(18px) saturate(150%);
+            border: 1px solid rgba(99, 102, 241, 0.34) !important;
+            background: rgba(255, 255, 255, 0.94) !important;
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.14),
-                0 12px 32px rgba(0, 0, 0, 0.62),
-                0 0 24px -8px rgba(156, 64, 255, 0.28);
+                inset 0 1px 0 #ffffff,
+                0 12px 28px -8px rgba(15, 23, 42, 0.12),
+                0 0 20px -8px rgba(99, 102, 241, 0.18);
         }
         [data-testid="stChatInputTextArea"] {
             min-height: 2.2rem !important;
             padding-top: 0.38rem !important;
             padding-bottom: 0.38rem !important;
             font-size: 0.86rem !important;
+            color: #0f172a !important;
         }
 
         /* Stage Badges (compatibility) */
@@ -580,14 +559,14 @@ def apply_custom_styles() -> None:
             font-weight: 600;
         }
         .stage-active {
-            background: rgba(16, 185, 129, 0.15);
-            color: #10b981;
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
             border: 1px solid rgba(16, 185, 129, 0.3);
         }
         .stage-upcoming {
-            background: rgba(148, 163, 184, 0.1);
-            color: #94a3b8;
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(148, 163, 184, 0.12);
+            color: #475569;
+            border: 1px solid rgba(148, 163, 184, 0.25);
         }
         </style>
         <div class="magic-bg-layer" aria-hidden="true">
@@ -604,20 +583,19 @@ def apply_custom_styles() -> None:
 
 
 def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: bool) -> None:
-    """Renders the Magic UI Border-Beam command-center header with Shiny Text badge."""
-    pill_fg = "#10b981" if status_ok else "#f59e0b"
-    pill_bg = "rgba(16, 185, 129, 0.15)" if status_ok else "rgba(245, 158, 11, 0.15)"
+    """Renders the White UI Border-Beam command-center header without any eyebrow line."""
+    pill_fg = "#059669" if status_ok else "#d97706"
+    pill_bg = "rgba(16, 185, 129, 0.10)" if status_ok else "rgba(245, 158, 11, 0.12)"
     st.markdown(
         f"""
         <div class="hero-header">
             <div class="hero-ghost-bg" aria-hidden="true">AIOPS STUDIO</div>
             <div style="position:relative; z-index:2;">
-                <div class="magic-eyebrow"><span class="magic-shiny-text">✦ Motion-Driven AI Infrastructure Command</span></div>
                 <div class="hero-title">🛡️ {esc(title)}</div>
                 <div class="hero-subtitle">{esc(subtitle)}</div>
             </div>
             <div style="position:relative; z-index:2;">
-                <span class="status-pill" style="color:{pill_fg}; background:{pill_bg}; border:1px solid {pill_fg}66;">
+                <span class="status-pill" style="color:{pill_fg}; background:{pill_bg}; border:1px solid {pill_fg}55;">
                     <span>●</span> {esc(status_label)}
                 </span>
             </div>
@@ -631,10 +609,10 @@ def render_metric_card(
     label: str,
     value: Any,
     subtext: str = "",
-    color: str = "#f8fafc",
+    color: str = "#0f172a",
     accent: Optional[str] = None,
 ) -> None:
-    """Renders a 3D glassmorphic KPI metric card."""
+    """Renders a White glassmorphic KPI metric card."""
     border_style = f"border-top: 2px solid {accent};" if accent else ""
     st.markdown(
         f"""
@@ -668,12 +646,12 @@ def render_3d_gauge_pair(
         st.markdown(
             f"""
             <div class="metric-card" style="display:flex; align-items:center; gap:1.15rem; border-top:2px solid {h_color};">
-                <svg width="104" height="104" viewBox="0 0 104 104" style="filter: drop-shadow(0 0 10px {h_color}55); flex-shrink:0;">
-                    <circle cx="52" cy="52" r="42" fill="rgba(15,23,42,0.75)" stroke="rgba(148,163,184,0.16)" stroke-width="8"/>
+                <svg width="104" height="104" viewBox="0 0 104 104" style="filter: drop-shadow(0 0 8px {h_color}44); flex-shrink:0;">
+                    <circle cx="52" cy="52" r="42" fill="rgba(248,250,252,0.95)" stroke="rgba(15,23,42,0.10)" stroke-width="8"/>
                     <circle cx="52" cy="52" r="42" fill="none" stroke="{h_color}" stroke-width="8" stroke-linecap="round"
                             stroke-dasharray="{circ:.2f}" stroke-dashoffset="{h_off:.2f}"
                             transform="rotate(-90 52 52)"/>
-                    <text x="52" y="57" text-anchor="middle" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="16" font-weight="800">{h_clamped:.0f}%</text>
+                    <text x="52" y="57" text-anchor="middle" fill="#0f172a" font-family="JetBrains Mono, monospace" font-size="16" font-weight="800">{h_clamped:.0f}%</text>
                 </svg>
                 <div>
                     <div class="metric-label">3D HEALTH CORE</div>
@@ -688,12 +666,12 @@ def render_3d_gauge_pair(
         st.markdown(
             f"""
             <div class="metric-card" style="display:flex; align-items:center; gap:1.15rem; border-top:2px solid {r_color};">
-                <svg width="104" height="104" viewBox="0 0 104 104" style="filter: drop-shadow(0 0 10px {r_color}55); flex-shrink:0;">
-                    <circle cx="52" cy="52" r="42" fill="rgba(15,23,42,0.75)" stroke="rgba(148,163,184,0.16)" stroke-width="8"/>
+                <svg width="104" height="104" viewBox="0 0 104 104" style="filter: drop-shadow(0 0 8px {r_color}44); flex-shrink:0;">
+                    <circle cx="52" cy="52" r="42" fill="rgba(248,250,252,0.95)" stroke="rgba(15,23,42,0.10)" stroke-width="8"/>
                     <circle cx="52" cy="52" r="42" fill="none" stroke="{r_color}" stroke-width="8" stroke-linecap="round"
                             stroke-dasharray="{circ:.2f}" stroke-dashoffset="{r_off:.2f}"
                             transform="rotate(-90 52 52)"/>
-                    <text x="52" y="57" text-anchor="middle" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="16" font-weight="800">{r_clamped:.0f}</text>
+                    <text x="52" y="57" text-anchor="middle" fill="#0f172a" font-family="JetBrains Mono, monospace" font-size="16" font-weight="800">{r_clamped:.0f}</text>
                 </svg>
                 <div>
                     <div class="metric-label">FAILURE RISK INDEX</div>

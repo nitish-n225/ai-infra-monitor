@@ -58,9 +58,9 @@ def render_live_fleet_fragment(api_client: BackendAPIClient):
                 <span>
                     <strong style="color:{stream_color};">● {esc(transport)}</strong>
                     &nbsp;&bull;&nbsp;
-                    <span style="color:#94a3b8;">Vectors: <code>{esc(health_info.get('faiss_vectors', 0))}</code></span>
+                    <span style="color:#475569;">Vectors: <code>{esc(health_info.get('faiss_vectors', 0))}</code></span>
                     &nbsp;&bull;&nbsp;
-                    <span style="color:#94a3b8;">Timeout: <code>{esc(health_info.get('offline_timeout_seconds', 30))}s</code></span>
+                    <span style="color:#475569;">Timeout: <code>{esc(health_info.get('offline_timeout_seconds', 30))}s</code></span>
                 </span>
                 <span style="color:#64748b;">
                     Seq <code>#{esc(bridge_status['last_seq'])}</code> &bull; Auto-refresh 5s
@@ -174,10 +174,10 @@ def render_live_fleet_fragment(api_client: BackendAPIClient):
                 f"""
                 <div class="metric-card" style="margin-bottom:0.85rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                        <strong style="color:#f1f5f9; font-size:0.98rem;">🖥️ {esc(dev['hostname'])}</strong>
+                        <strong style="color:#0f172a; font-size:0.98rem;">🖥️ {esc(dev['hostname'])}</strong>
                         {badge}
                     </div>
-                    <div style="font-size:0.74rem; color:#94a3b8; margin-bottom:0.55rem;">
+                    <div style="font-size:0.74rem; color:#475569; margin-bottom:0.55rem;">
                         Org <code>{esc(dev.get('client_org', 'Default'))}</code> &bull;
                         IP <code>{esc(dev.get('ip_address') or 'N/A')}</code> &bull;
                         v{esc(dev.get('agent_version', '2.0.0'))}<br>
@@ -186,7 +186,7 @@ def render_live_fleet_fragment(api_client: BackendAPIClient):
                     {resource_bar_html("CPU", cpu_val)}
                     {resource_bar_html("RAM", ram_val)}
                     {resource_bar_html("Disk", disk_val)}
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-top:0.6rem; border-top:1px solid rgba(148,163,184,0.12); padding-top:0.45rem;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#475569; margin-top:0.6rem; border-top:1px solid rgba(15,23,42,0.08); padding-top:0.45rem;">
                         <span>Net ↓{net_rx} / ↑{net_tx} KB/s</span>
                         <span>Health <strong style="color:{h_col};">{esc(health_v)}%</strong> &bull; Risk <strong>{esc(risk_v)}</strong></span>
                     </div>

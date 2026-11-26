@@ -92,10 +92,10 @@ def render_overview_tab(
                     f"""
                     <div class="metric-card" style="margin-bottom:0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="color:#f1f5f9; font-size:0.9rem;">{esc(svc_name)}</strong>
+                            <strong style="color:#0f172a; font-size:0.9rem;">{esc(svc_name)}</strong>
                             <span style="font-size:0.74rem; color:{status_color}; font-weight:700;">{esc(status_text)}</span>
                         </div>
-                        <div style="font-size:0.74rem; color:#94a3b8; margin-top:0.35rem;">{esc(count)} log events</div>
+                        <div style="font-size:0.74rem; color:#475569; margin-top:0.35rem;">{esc(count)} log events</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -127,11 +127,11 @@ def render_overview_tab(
             st.markdown(
                 f"""
                 <div class="critical-banner">
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-bottom:0.25rem;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#475569; margin-bottom:0.25rem;">
                         <span><strong style="color:{color};">[{esc(sev)}]</strong> <code>{esc(ev.get('service', 'unknown'))}</code></span>
                         <span>{esc(ev.get('timestamp', ''))}</span>
                     </div>
-                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#f1f5f9;">
+                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#0f172a;">
                         {esc(ev.get('message', ''))}
                     </div>
                 </div>
@@ -225,12 +225,12 @@ def render_rca_tab(rca_results: Dict[str, Any], risk_data: Dict[str, Any], healt
                 f"""
                 <div class="metric-card" style="margin-bottom:0.75rem; border-left:4px solid #22d3ee;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
-                        <strong style="color:#f1f5f9;">🔧 [{esc(r['action_id'])}] {esc(r['title'])}</strong>
-                        <span style="font-size:0.75rem; color:#22d3ee; font-weight:700;">Target: {esc(r['target_service'])}</span>
+                        <strong style="color:#0f172a;">🔧 [{esc(r['action_id'])}] {esc(r['title'])}</strong>
+                        <span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Target: {esc(r['target_service'])}</span>
                     </div>
-                    <div style="font-size:0.84rem; color:#cbd5e1; margin-bottom:0.3rem;"><strong>Reason:</strong> {esc(r['reason'])}</div>
-                    <div style="font-size:0.78rem; color:#94a3b8;"><strong>Prerequisites:</strong> {esc(r['prerequisites'])}</div>
-                    <div style="font-size:0.78rem; color:#94a3b8;"><strong>Verification:</strong> {esc(r['verification_steps'])}</div>
+                    <div style="font-size:0.84rem; color:#334155; margin-bottom:0.3rem;"><strong>Reason:</strong> {esc(r['reason'])}</div>
+                    <div style="font-size:0.78rem; color:#475569;"><strong>Prerequisites:</strong> {esc(r['prerequisites'])}</div>
+                    <div style="font-size:0.78rem; color:#475569;"><strong>Verification:</strong> {esc(r['verification_steps'])}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -311,13 +311,13 @@ def render_semantic_search_tab(vector_store, df: pd.DataFrame):
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
                         <span>
                             <strong>#{esc(item['rank'])}</strong> &bull;
-                            <span style="font-size:0.75rem; color:#94a3b8;">Line {esc(item['line_no'])}</span> &bull;
-                            <code style="color:#22d3ee;">[{esc(item['service'])}]</code> &bull;
+                            <span style="font-size:0.75rem; color:#64748b;">Line {esc(item['line_no'])}</span> &bull;
+                            <code style="color:#4f46e5;">[{esc(item['service'])}]</code> &bull;
                             <strong style="color:{sev_color};">[{esc(sev)}]</strong>
                         </span>
                         <span style="font-size:0.8rem; font-weight:700; color:{score_color};">{esc(score_pct)}% Match</span>
                     </div>
-                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#f1f5f9;">{esc(item['message'])}</div>
+                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#0f172a;">{esc(item['message'])}</div>
                     <div style="font-size:0.72rem; color:#64748b; margin-top:0.2rem;">{esc(item['timestamp'])}</div>
                 </div>
                 """,
