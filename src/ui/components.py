@@ -546,6 +546,7 @@ def render_3d_topology_scene(
         }}
         resize();
         window.addEventListener("resize", resize);
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
 
         let yaw = 0.45, pitch = 0.34, zoom = 1.0, autoOrbit = true;
         let dragging = false, lastX = 0, lastY = 0, mouseX = -999, mouseY = -999;
@@ -902,6 +903,7 @@ def render_3d_vector_constellation(
         }}
         resize();
         window.addEventListener("resize", resize);
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
 
         let yaw = 0.58, pitch = 0.32, zoom = 1.0, autoSpin = true;
         let dragging = false, lx = 0, ly = 0, mx = -999, my = -999;
@@ -1326,6 +1328,7 @@ def render_3d_ai_neural_core(
         }}
         resize();
         window.addEventListener("resize", resize);
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
 
         let yaw = 0.25, pitch = 0.18, zoom = 1.0, spinning = true;
         let dragging = false, lx = 0, ly = 0, mx = -999, my = -999;

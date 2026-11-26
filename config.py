@@ -9,7 +9,7 @@ SAMPLE_LOGS_DIR = BASE_DIR / "sample_logs"
 
 PROJECT_TITLE = "Enterprise Autonomous AI Infrastructure Monitoring System"
 PROJECT_SUBTITLE = "Real-Time Multi-Device Windows AIOps Platform"
-VERSION = "5.0.0-Live"
+VERSION = "5.1.0-3D"
 
 # Research Paper Architecture Alignment (IEEE Paper: Enterprise Autonomous AI Infrastructure Monitoring System)
 RESEARCH_MODULES = [

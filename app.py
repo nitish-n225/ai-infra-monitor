@@ -16,6 +16,7 @@ if Path("/mount/src").exists():
 
 from config import PROJECT_SUBTITLE, PROJECT_TITLE, SEVERITY_COLORS, VERSION
 from src.assistant_engine import InfrastructureAIAssistant
+from src.embedding_engine import LogEmbeddingEngine
 from src.health_score import InfrastructureHealthScorer
 from src.parser import InfrastructureLogParser
 from src.predictive_failure import PredictiveFailureDetector
@@ -26,6 +27,7 @@ from src.realtime_client import (
     get_realtime_bridge,
     is_remote_backend_configured,
 )
+from src.sample_data import load_sample_log
 from src.telemetry import TelemetryAnalyzer
 from src.ui.components import (
     apply_custom_styles,
@@ -69,8 +71,9 @@ if "operator_jwt" not in st.session_state:
 if "operator_user" not in st.session_state:
     st.session_state["operator_user"] = ""
 if "raw_log_content" not in st.session_state:
-    st.session_state["raw_log_content"] = ""
-    st.session_state["active_file_name"] = "None"
+    default_sample = load_sample_log("production_incident.log") or ""
+    st.session_state["raw_log_content"] = default_sample
+    st.session_state["active_file_name"] = "production_incident.log" if default_sample else "None"
 if "vector_store" not in st.session_state:
     st.session_state["vector_store"] = FaissVectorStore()
 if "assistant_engine" not in st.session_state:
@@ -102,6 +105,14 @@ risk_data = PredictiveFailureDetector.assess_risk(parsed_df, rca_results)
 vector_store = st.session_state["vector_store"]
 if st.session_state.get("vector_store_indexed_file") != active_filename:
     vector_store.reset()
+if not parsed_df.empty and vector_store.get_stats().get("total_vectors", 0) == 0:
+    try:
+        embs, recs, _ = LogEmbeddingEngine.embed_logs_with_fallback(parsed_df)
+        if embs.size > 0:
+            vector_store.build_index(embs, recs)
+            st.session_state["vector_store_indexed_file"] = active_filename
+    except Exception:
+        pass
 
 assistant_engine = st.session_state["assistant_engine"]
 if st.session_state.get("last_active_file") != active_filename:
@@ -186,10 +197,23 @@ if data_mode == "Live Fleet":
             else:
                 st.error(f"Could not reach `{backend_url}`.")
     elif not jwt_token:
-        _, col_login, _ = st.columns([1, 1.35, 1])
+        col_preview, col_login = st.columns([1.45, 1])
+        with col_preview:
+            render_3d_ai_neural_core(
+                context_label="Enterprise AIOps Control Plane",
+                intent_label="AUTHENTICATION_READY",
+                confidence_label="STANDBY",
+                signals=[
+                    {"label": "Windows Agents", "detail": "psutil + Event Viewer live telemetry"},
+                    {"label": "FastAPI + PG", "detail": "Central PostgreSQL persistence"},
+                    {"label": "FAISS 384-d", "detail": "Real-time vector similarity search"},
+                    {"label": "RCA Engine", "detail": "6-category fault-tree analyzer"},
+                ],
+                height=310,
+            )
         with col_login:
             st.markdown("### 🔐 Operator Sign-In")
-            st.caption("Authenticate to access real-time fleet telemetry, incidents, and endpoint controls.")
+            st.caption("Sign in for live Windows fleet telemetry, or switch to **Log Analyzer** in the sidebar.")
             with st.form("operator_login_form"):
                 u_in = st.text_input("Username", value="admin")
                 p_in = st.text_input("Password", type="password", placeholder="MONITOR_ADMIN_PASSWORD or Admin Key")
