@@ -15,15 +15,15 @@ def esc(value: Any) -> str:
 
 
 def apply_custom_styles() -> None:
-    """Applies a Magic UI-inspired (magicui.design) obsidian design system with Border Beam, Meteors, Dot Pattern, Retro Grid, Magic Cards & Shimmer Buttons."""
+    """Applies a MotionSites.ai-inspired cinematic motion design system (fluid shader backdrop, film grain, staggered kinetic reveals, Border Beam, Meteors & glassmorphism)."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         :root {
-            --bg-root: #050509;
-            --bg-surface: rgba(10, 11, 18, 0.78);
+            --bg-root: #040408;
+            --bg-surface: rgba(11, 12, 20, 0.78);
             --bg-surface-strong: rgba(7, 8, 14, 0.94);
             --border-subtle: rgba(255, 255, 255, 0.10);
             --border-magic: rgba(156, 64, 255, 0.45);
@@ -58,15 +58,20 @@ def apply_custom_styles() -> None:
             inherits: false;
         }
 
+        @keyframes motionEntrance {
+            0%   { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.985); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+
         @keyframes magicRetroGrid {
             0%   { background-position: 0 0, 0 0; }
             100% { background-position: 0 64px, 0 64px; }
         }
 
         @keyframes magicAurora {
-            0%   { transform: translate3d(-2%, -1%, 0) scale(1); }
-            50%  { transform: translate3d(2%, 2%, 0) scale(1.06); }
-            100% { transform: translate3d(-2%, -1%, 0) scale(1); }
+            0%   { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
+            50%  { transform: translate3d(3%, 2.5%, 0) rotate(3deg) scale(1.08); }
+            100% { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
         }
 
         @keyframes magicBorderBeamAngle {
@@ -90,7 +95,13 @@ def apply_custom_styles() -> None:
             100% { left: 140%; }
         }
 
-        /* Hide layout footprint for fixed ambient Magic UI meteor layer */
+        @keyframes motionMeshShift {
+            0%   { background-position: 0% 20%, 100% 0%, 50% 80%, 0 0; }
+            50%  { background-position: 20% 35%, 80% 15%, 45% 65%, 0 0; }
+            100% { background-position: 0% 20%, 100% 0%, 50% 80%, 0 0; }
+        }
+
+        /* Hide layout footprint for fixed ambient MotionSites film-grain & meteor layer */
         .stElementContainer:has(.magic-bg-layer),
         div[data-testid="stMarkdownContainer"]:has(.magic-bg-layer) {
             margin: 0 !important;
@@ -100,17 +111,29 @@ def apply_custom_styles() -> None:
             overflow: visible !important;
         }
 
-        /* Magic UI Dot Pattern + Multi-Spectrum Spotlight Backdrop */
+        /* MotionSites Fluid Shifting Mesh Shader + Dot Matrix Backdrop */
         .stApp {
             position: relative;
-            background-color: #050509;
+            background-color: #040408;
             background-image:
-                radial-gradient(ellipse 72% 48% at 15% -6%, rgba(156, 64, 255, 0.20), transparent 60%),
-                radial-gradient(ellipse 68% 48% at 86% 0%, rgba(255, 170, 64, 0.14), transparent 58%),
-                radial-gradient(ellipse 70% 50% at 52% 52%, rgba(56, 189, 248, 0.11), transparent 64%),
-                radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 26px 26px;
+                radial-gradient(ellipse 74% 50% at 14% -5%, rgba(156, 64, 255, 0.22), transparent 60%),
+                radial-gradient(ellipse 68% 50% at 88% 2%, rgba(255, 170, 64, 0.16), transparent 58%),
+                radial-gradient(ellipse 72% 52% at 50% 56%, rgba(56, 189, 248, 0.13), transparent 64%),
+                radial-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1px);
+            background-size: 130% 130%, 130% 130%, 130% 130%, 26px 26px;
+            animation: motionMeshShift 20s ease-in-out infinite;
             overflow-x: hidden;
+        }
+
+        /* Subtle Studio Film-Grain Overlay (MotionSites Signature Depth) */
+        .stApp::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.038;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
         }
 
         /* Magic UI Retro Grid Perspective Floor */
@@ -281,7 +304,7 @@ def apply_custom_styles() -> None:
             transform: translateY(0px);
         }
 
-        /* Magic UI Border Beam Hero Header */
+        /* MotionSites Border Beam + Ghost Typography Hero */
         .hero-header {
             position: relative;
             overflow: hidden;
@@ -290,17 +313,33 @@ def apply_custom_styles() -> None:
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            background: radial-gradient(circle at 20% 0%, rgba(156, 64, 255, 0.12), transparent 55%), rgba(9, 10, 16, 0.88);
+            background: radial-gradient(circle at 20% 0%, rgba(156, 64, 255, 0.15), transparent 55%), rgba(9, 10, 16, 0.88);
             backdrop-filter: blur(22px) saturate(155%);
             -webkit-backdrop-filter: blur(22px) saturate(155%);
             border: 1px solid rgba(255, 255, 255, 0.11);
             border-radius: 18px;
-            padding: 1.2rem 1.55rem;
+            padding: 1.25rem 1.55rem;
             margin-bottom: 1.2rem;
             box-shadow:
                 inset 0 1px 0 rgba(255, 255, 255, 0.14),
                 0 24px 56px -16px rgba(0, 0, 0, 0.85);
             transform-style: preserve-3d;
+            animation: motionEntrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .hero-ghost-bg {
+            position: absolute;
+            right: 1.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
+            font-size: 3.6rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.032);
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+            z-index: 1;
         }
         /* Animated Magic UI Border Beam perimeter (#ffaa40 -> #9c40ff -> #38bdf8) */
         .hero-header::before {
@@ -345,10 +384,10 @@ def apply_custom_styles() -> None:
             animation: magicShinySweep 4.5s linear infinite;
         }
         .hero-title {
-            font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-            font-size: 1.46rem;
+            font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.48rem;
             font-weight: 800;
-            letter-spacing: -0.025em;
+            letter-spacing: -0.02em;
             background: linear-gradient(95deg, #ffffff 0%, #ffe6b3 38%, #d8b4fe 72%, #7dd3fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -361,7 +400,7 @@ def apply_custom_styles() -> None:
             letter-spacing: 0.005em;
         }
 
-        /* Magic UI Bento / Magic Cards */
+        /* MotionSites Staggered Bento / Magic Cards */
         .metric-card {
             position: relative;
             overflow: hidden;
@@ -377,7 +416,8 @@ def apply_custom_styles() -> None:
                 inset 0 1px 0 rgba(255, 255, 255, 0.12),
                 0 20px 42px -14px rgba(0, 0, 0, 0.82);
             transform-style: preserve-3d;
-            transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.24s ease, box-shadow 0.24s ease;
+            animation: motionEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
         }
         .metric-card:hover {
             transform: translateY(-5px) rotateX(2deg) rotateY(-1deg);
@@ -567,8 +607,9 @@ def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: 
     st.markdown(
         f"""
         <div class="hero-header">
+            <div class="hero-ghost-bg" aria-hidden="true">AIOPS STUDIO</div>
             <div style="position:relative; z-index:2;">
-                <div class="magic-eyebrow"><span class="magic-shiny-text">✦ Autonomous AI Infrastructure Command</span></div>
+                <div class="magic-eyebrow"><span class="magic-shiny-text">✦ Motion-Driven AI Infrastructure Command</span></div>
                 <div class="hero-title">🛡️ {esc(title)}</div>
                 <div class="hero-subtitle">{esc(subtitle)}</div>
             </div>
