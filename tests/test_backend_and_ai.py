@@ -43,6 +43,11 @@ def run_backend_tests():
     live_vector_store.reset()
 
     with TestClient(app) as client:
+        # 0. Root & health endpoints must return 200
+        r_root = client.get("/")
+        assert r_root.status_code == 200 and r_root.json()["status"] == "online"
+        assert client.get("/health").status_code == 200
+
         # 1. Unauthenticated requests to protected endpoints must fail with 401
         assert client.get("/api/v1/devices").status_code == 401
         assert client.get("/api/v1/events").status_code == 401

@@ -182,6 +182,17 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root() -> Dict[str, Any]:
+    return {
+        "service": "ai-infrastructure-monitoring-backend",
+        "status": "online",
+        "version": app.version,
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health")
 def health_check() -> Dict[str, Any]:
     return {
