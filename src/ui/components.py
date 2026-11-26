@@ -601,6 +601,174 @@ def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: 
     )
 
 
+def render_luxury_login_header() -> None:
+    """
+    Renders an executive Magic UI Border-Beam + Pearl White scoped login portal header
+    without exposing the post-login hero status banner.
+    """
+    st.markdown(
+        """
+        <style>
+        .login-luxe-banner {
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            padding: 1.65rem 1.5rem 1.45rem 1.5rem;
+            border-radius: 20px;
+            margin-top: 0.4rem;
+            margin-bottom: 1.05rem;
+            background:
+                radial-gradient(circle at 50% -10%, rgba(156, 64, 255, 0.22), transparent 62%),
+                linear-gradient(160deg, rgba(14, 16, 28, 0.92), rgba(7, 8, 15, 0.96));
+            backdrop-filter: blur(22px) saturate(150%);
+            -webkit-backdrop-filter: blur(22px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                0 28px 64px -16px rgba(0, 0, 0, 0.88);
+            animation: motionEntrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .login-luxe-banner::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            padding: 1.5px;
+            border-radius: 20px;
+            background: conic-gradient(
+                from var(--magic-angle, 0deg),
+                transparent 0deg 250deg,
+                #ffaa40 290deg,
+                #9c40ff 328deg,
+                #38bdf8 352deg,
+                transparent 360deg
+            );
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: magicBorderBeamAngle 7s linear infinite;
+        }
+        .login-crest {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 0.85rem auto;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: linear-gradient(145deg, rgba(255, 170, 64, 0.18), rgba(156, 64, 255, 0.24));
+            border: 1px solid rgba(255, 255, 255, 0.20);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.28),
+                0 12px 26px -6px rgba(156, 64, 255, 0.45);
+        }
+        .login-title {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-style: normal;
+            font-size: 1.48rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(95deg, #ffffff 0%, #ffe6b3 45%, #d8b4fe 85%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 0.35rem 0;
+        }
+        .login-sub {
+            font-size: 0.83rem;
+            color: #a1a1aa;
+            line-height: 1.45;
+            margin-bottom: 0.9rem;
+        }
+        .login-pills {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.45rem;
+        }
+        .login-pill {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            padding: 0.22rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        /* Crisp White Glass Sign-In Form Card scoped strictly to login screen */
+        body:has(.login-luxe-banner) [data-testid="stForm"] {
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.90) !important;
+            border-radius: 18px !important;
+            padding: 1.55rem 1.5rem 1.4rem 1.5rem !important;
+            box-shadow:
+                inset 0 1px 0 #ffffff,
+                0 28px 64px -16px rgba(0, 0, 0, 0.82),
+                0 0 36px -10px rgba(156, 64, 255, 0.28) !important;
+            animation: motionEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        body:has(.login-luxe-banner) [data-testid="stForm"] label,
+        body:has(.login-luxe-banner) [data-testid="stForm"] p {
+            color: #0f172a !important;
+            font-weight: 600 !important;
+            font-size: 0.82rem !important;
+        }
+        body:has(.login-luxe-banner) [data-testid="stForm"] input {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+            border: 1px solid rgba(15, 23, 42, 0.15) !important;
+            border-radius: 10px !important;
+        }
+        body:has(.login-luxe-banner) [data-testid="stForm"] [data-baseweb="input"] {
+            background-color: #f8fafc !important;
+            border: 1px solid rgba(15, 23, 42, 0.14) !important;
+            border-radius: 10px !important;
+        }
+        body:has(.login-luxe-banner) [data-testid="stForm"] input:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+        }
+        body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button {
+            background: linear-gradient(135deg, #0f172a 0%, #312e81 55%, #4f46e5 100%) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(99, 102, 241, 0.45) !important;
+            border-radius: 11px !important;
+            min-height: 2.55rem !important;
+            font-size: 0.88rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.01em !important;
+            box-shadow: 0 12px 26px -8px rgba(79, 70, 229, 0.55) !important;
+        }
+        body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px -8px rgba(99, 102, 241, 0.72) !important;
+        }
+        .login-footer-note {
+            text-align: center;
+            font-size: 0.73rem;
+            color: #94a3b8;
+            margin-top: 0.85rem;
+            letter-spacing: 0.02em;
+        }
+        </style>
+        <div class="login-luxe-banner">
+            <div class="login-crest">🛡️</div>
+            <div class="login-title">Operator Access Portal</div>
+            <div class="login-sub">Sign in to access fleet telemetry, incident diagnostics, and endpoint controls.</div>
+            <div class="login-pills">
+                <span class="login-pill">🔐 Zero-Trust JWT</span>
+                <span class="login-pill">📡 Live Telemetry</span>
+                <span class="login-pill">🧠 Neural RCA</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_metric_card(
     label: str,
     value: Any,

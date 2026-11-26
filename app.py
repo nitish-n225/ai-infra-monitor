@@ -36,6 +36,7 @@ from src.ui.components import (
     render_3d_vector_constellation,
     render_assistant_faq_grid,
     render_hero_header,
+    render_luxury_login_header,
 )
 from src.ui.live_views import (
     render_fleet_admin_tab,
@@ -163,18 +164,19 @@ with st.sidebar:
             else:
                 st.error("Still unreachable. Verify backend service or BACKEND_URL secret.")
 
-# Top Command Header
-header_status = (
-    f"Backend Online • {backend_health.get('database', 'db').upper()}"
-    if backend_health
-    else "Backend Waking / Offline"
-)
-render_hero_header(
-    PROJECT_TITLE,
-    "Real-Time Windows Fleet Telemetry, Root Cause Analysis & Semantic Log Intelligence",
-    header_status,
-    bool(backend_health),
-)
+# Top Command Header (shown only when authenticated or in Log Analyzer, not on login screen)
+if data_mode == "Log Analyzer" or jwt_token:
+    header_status = (
+        f"Backend Online • {backend_health.get('database', 'db').upper()}"
+        if backend_health
+        else "Backend Waking / Offline"
+    )
+    render_hero_header(
+        PROJECT_TITLE,
+        "Real-Time Windows Fleet Telemetry, Root Cause Analysis & Semantic Log Intelligence",
+        header_status,
+        bool(backend_health),
+    )
 
 if data_mode == "Live Fleet":
     if not backend_health:
@@ -198,14 +200,17 @@ if data_mode == "Live Fleet":
             else:
                 st.error(f"Could not reach `{backend_url}`.")
     elif not jwt_token:
-        _, col_login, _ = st.columns([1, 1.35, 1])
+        _, col_login, _ = st.columns([0.9, 1.35, 0.9])
         with col_login:
-            st.markdown("### 🔐 Operator Sign-In")
-            st.caption("Authenticate to access real-time fleet telemetry, incidents, and endpoint controls.")
+            render_luxury_login_header()
             with st.form("operator_login_form"):
                 u_in = st.text_input("Username", value="admin")
                 p_in = st.text_input("Password", type="password", placeholder="MONITOR_ADMIN_PASSWORD or Admin Key")
                 login_btn = st.form_submit_button("🔓 Sign In", use_container_width=True, type="primary")
+            st.markdown(
+                "<div class='login-footer-note'>Protected by Zero-Trust JWT Authentication • Role-Scoped Fleet Access</div>",
+                unsafe_allow_html=True,
+            )
             if login_btn:
                 with st.spinner("Signing in..."):
                     try:
