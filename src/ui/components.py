@@ -110,8 +110,11 @@ def apply_custom_styles() -> None:
 
         /* 3D Tactile Buttons */
         .stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
-            border-radius: 10px;
+            border-radius: 9px;
             font-weight: 600;
+            font-size: 0.8rem;
+            padding: 0.32rem 0.72rem;
+            min-height: 2.05rem;
             border: 1px solid rgba(148, 163, 184, 0.22);
             background: linear-gradient(180deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
             box-shadow:
@@ -1550,36 +1553,37 @@ def render_3d_ai_neural_core(
 
 
 ASSISTANT_FAQS_PRIMARY = [
-    ("🚨 Critical incidents?", "What are the most critical incidents?"),
-    ("💥 Why is DB failing?", "Why is the database failing?"),
-    ("🌐 Affected services?", "Which services are affected?"),
-    ("🩺 Health score breakdown?", "How was the health score calculated?"),
-    ("⚡ Risk score factors?", "What factors increased the infrastructure risk score?"),
-    ("🛠️ Recovery steps?", "What recovery steps are recommended?"),
+    ("🚨 Incidents", "What are the most critical incidents?"),
+    ("💥 DB Fail", "Why is the database failing?"),
+    ("🌐 Services", "Which services are affected?"),
+    ("🩺 Health", "How was the health score calculated?"),
+    ("⚡ Risk", "What factors increased the infrastructure risk score?"),
+    ("🛠️ Recovery", "What recovery steps are recommended?"),
 ]
 
 ASSISTANT_FAQS_EXTRA = [
-    ("🧠 Memory & OOM logs?", "Find logs related to memory exhaustion."),
-    ("📑 Supporting evidence?", "Show the evidence supporting this suspected root cause."),
-    ("🛡️ Test anti-hallucination", "What is the GPU thermal throttling temperature?"),
+    ("📋 Summarize Logs", "Summarize the logs"),
+    ("⏱️ Outage Timeline", "What happened first in the timeline?"),
+    ("🧠 Memory & OOM Logs", "Find logs related to memory exhaustion."),
+    ("📑 Supporting Evidence", "Show the evidence supporting this suspected root cause."),
+    ("🛡️ Test Anti-Hallucination", "What is the GPU thermal throttling temperature?"),
 ]
 
 
 def render_assistant_faq_grid(key_prefix: str) -> Optional[str]:
-    """Renders clickable FAQ prompt buttons for the AI Assistant and returns the selected query."""
+    """Renders a compact single-row FAQ pill bar + 'More' popover for the AI Assistant."""
     selected: Optional[str] = None
-    st.caption("💡 **Frequently Asked Questions (Click to Ask)**")
-    for row_start in (0, 3):
-        cols = st.columns(3)
-        for idx, (label, prompt_text) in enumerate(ASSISTANT_FAQS_PRIMARY[row_start : row_start + 3]):
-            if cols[idx].button(label, use_container_width=True, key=f"{key_prefix}_faq_{row_start + idx}"):
-                selected = prompt_text
+    cols = st.columns([1, 1, 1, 1, 1, 1, 0.9])
+    for idx, (label, prompt_text) in enumerate(ASSISTANT_FAQS_PRIMARY):
+        if cols[idx].button(label, use_container_width=True, key=f"{key_prefix}_faq_{idx}"):
+            selected = prompt_text
 
-    with st.expander("❓ More FAQ & Verification Questions", expanded=False):
-        ex_cols = st.columns(3)
-        for idx, (label, prompt_text) in enumerate(ASSISTANT_FAQS_EXTRA):
-            if ex_cols[idx].button(label, use_container_width=True, key=f"{key_prefix}_faq_ex_{idx}"):
-                selected = prompt_text
+    with cols[6]:
+        with st.popover("❓ More", use_container_width=True):
+            st.caption("More FAQ & Verification Prompts")
+            for idx, (label, prompt_text) in enumerate(ASSISTANT_FAQS_EXTRA):
+                if st.button(label, use_container_width=True, key=f"{key_prefix}_faq_ex_{idx}"):
+                    selected = prompt_text
     return selected
 
 
