@@ -784,6 +784,64 @@ def render_3d_vector_constellation(
     )
 
 
+def render_3d_rca_fault_graph(
+    incidents: List[Dict[str, Any]],
+    live_mode: bool = False,
+    height: int = 340,
+) -> None:
+    """
+    Renders an interactive 3D Root Cause Analysis (RCA) & Incident Fault-Tree Graph.
+    Works for both static analyzer RCA results and live backend fleet incidents.
+    """
+    nodes = []
+    for inc in incidents[:18]:
+        sev = str(inc.get("severity", "HIGH")).upper()
+        status = str(inc.get("status", "OPEN")).upper()
+        if status == "RESOLVED":
+            state = "healthy"
+        elif sev in ("CRITICAL", "FATAL") or status == "OPEN":
+            state = "critical" if sev in ("CRITICAL", "FATAL") else "warning"
+        else:
+            state = "warning"
+
+        title_short = str(inc.get("title") or inc.get("category") or "Incident")[:28]
+        if live_mode:
+            host = inc.get("hostname", "host")
+            conf = inc.get("confidence_pct", 80)
+            cause = inc.get("possible_root_cause") or "Under investigation"
+            label = f"{host}: {title_short}"[:30]
+            detail = (
+                f"[{sev}] [{status}] Confidence: {esc(conf)}%<br>"
+                f"Cause: {esc(str(cause)[:100])}"
+            )
+            size = max(12.0, min(22.0, float(conf) / 4.8))
+        else:
+            ev_count = int(inc.get("evidence_count", 1))
+            conf_lbl = inc.get("confidence_label", "HIGH")
+            cause = inc.get("likely_root_cause") or "Under investigation"
+            label = title_short
+            detail = (
+                f"[{sev}] Evidence: {ev_count} line(s) &bull; {esc(conf_lbl)}<br>"
+                f"Root Cause: {esc(str(cause)[:105])}"
+            )
+            size = min(22.0, 12.0 + ev_count * 1.4)
+
+        nodes.append({
+            "label": label,
+            "state": state,
+            "size": size,
+            "detail": detail,
+        })
+
+    render_3d_topology_scene(
+        nodes=nodes,
+        center_label="RCA Fault Core",
+        center_sub="Root Cause Graph",
+        title="Interactive 3D Incident & Root Cause Fault Graph",
+        height=height,
+    )
+
+
 def render_stage_badge(stage_name: str, status: str) -> None:
     """Renders a compact status badge."""
     css_class = "stage-active" if status == "COMPLETED" else "stage-upcoming"

@@ -26,6 +26,7 @@ def test_ui_modules_compile_and_escape():
         render_metric_card,
         render_hero_header,
         render_3d_gauge_pair,
+        render_3d_rca_fault_graph,
         render_3d_topology_scene,
         render_3d_vector_constellation,
     )
@@ -52,6 +53,7 @@ def test_ui_modules_compile_and_escape():
     assert callable(render_metric_card)
     assert callable(render_hero_header)
     assert callable(render_3d_gauge_pair)
+    assert callable(render_3d_rca_fault_graph)
     assert callable(render_3d_topology_scene)
     assert callable(render_3d_vector_constellation)
     assert hasattr(views, "render_overview_tab")

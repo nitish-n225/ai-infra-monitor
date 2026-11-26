@@ -11,6 +11,7 @@ from src.self_healing import SAFETY_POLICY_DISCLAIMER, SelfHealingEngine
 from src.ui.components import (
     esc,
     render_3d_gauge_pair,
+    render_3d_rca_fault_graph,
     render_3d_topology_scene,
     render_3d_vector_constellation,
     render_metric_card,
@@ -138,24 +139,19 @@ def render_overview_tab(
 
 
 def render_rca_tab(rca_results: Dict[str, Any], risk_data: Dict[str, Any], health_data: Dict[str, Any], df: pd.DataFrame):
-    """Renders Root Cause Analysis, Health Breakdown, Risk Profile, and Advisory Playbooks."""
-    col_h1, col_h2 = st.columns(2)
+    """Renders 3D Health/Risk gauges, 3D RCA Fault Graph, Root Cause Analysis, and Playbooks."""
+    risk_score = risk_data.get("risk_score", 0.0)
+    render_3d_gauge_pair(
+        health_data["health_score"],
+        f"{health_data['condition']} ({health_data['health_score']}%)",
+        risk_score,
+        f"{risk_data['risk_level']} ({risk_score}/100)",
+    )
 
+    col_h1, col_h2 = st.columns(2)
     with col_h1:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="metric-label">HEALTH SCORE</span>
-                    <span style="font-size:0.82rem; font-weight:700; color:{esc(health_data['color'])};">{esc(health_data['condition'])}</span>
-                </div>
-                <div class="metric-value" style="color:{esc(health_data['color'])}; margin:0.35rem 0;">{esc(health_data['health_score'])}%</div>
-                <div class="metric-desc" style="color:#cbd5e1;">{esc(health_data['explanation'])}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
         with st.expander("📐 Score Deduction Breakdown", expanded=False):
+            st.caption(health_data["explanation"])
             if health_data.get("deductions_breakdown"):
                 for d in health_data["deductions_breakdown"]:
                     st.markdown(f"- **{d['reason']}**: `- {d['deduction']} pts` ({d['detail']})")
@@ -163,22 +159,8 @@ def render_rca_tab(rca_results: Dict[str, Any], risk_data: Dict[str, Any], healt
                 st.write("Zero deductions — 100.0% healthy.")
 
     with col_h2:
-        risk_score = risk_data.get("risk_score", 0.0)
-        risk_color = "#ef4444" if risk_score >= 70 else ("#f59e0b" if risk_score >= 30 else "#10b981")
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="metric-label">FAILURE RISK INDEX</span>
-                    <span style="font-size:0.82rem; font-weight:700; color:{risk_color};">{esc(risk_data['risk_level'])}</span>
-                </div>
-                <div class="metric-value" style="color:{risk_color}; margin:0.35rem 0;">{esc(risk_score)}/100</div>
-                <div class="metric-desc" style="color:#cbd5e1;">{esc(risk_data['risk_indicator'])}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
         with st.expander("📊 Risk Factor Weights", expanded=False):
+            st.caption(risk_data["risk_indicator"])
             if risk_data.get("contributing_factors"):
                 factor_df = pd.DataFrame([
                     {
@@ -194,11 +176,12 @@ def render_rca_tab(rca_results: Dict[str, Any], risk_data: Dict[str, Any], healt
                 st.write(risk_data.get("summary", "No factors computed."))
 
     st.markdown("---")
-    st.markdown("#### 🔍 Root Cause Incidents")
+    st.markdown("#### 🔍 3D Root Cause Analysis & Incidents")
     incidents = rca_results.get("incidents", [])
     if not incidents:
         st.success("🟢 No failure signatures detected in the active dataset.")
     else:
+        render_3d_rca_fault_graph(incidents, live_mode=False, height=340)
         for idx, inc in enumerate(incidents, start=1):
             sev_color = "#ef4444" if inc["severity"] == "CRITICAL" else "#f59e0b"
             with st.expander(f"#{idx} [{inc['severity']}] {inc['title']} ({inc['evidence_count']} log lines)", expanded=True):

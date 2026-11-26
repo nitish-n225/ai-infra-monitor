@@ -9,6 +9,7 @@ from src.realtime_client import BackendAPIClient, get_realtime_bridge
 from src.ui.components import (
     esc,
     render_3d_gauge_pair,
+    render_3d_rca_fault_graph,
     render_3d_topology_scene,
     render_metric_card,
     resource_bar_html,
@@ -349,6 +350,8 @@ def render_live_incidents_fragment(api_client: BackendAPIClient):
         mime="application/json",
         key="dl_incidents_json",
     )
+
+    render_3d_rca_fault_graph(incidents, live_mode=True, height=330)
 
     for inc in incidents:
         sev = inc.get("severity", "HIGH")
