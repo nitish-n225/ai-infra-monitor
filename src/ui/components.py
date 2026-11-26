@@ -44,11 +44,26 @@ def apply_custom_styles() -> None:
             font-style: normal;
         }
 
-        /* Clean Streamlit chrome */
-        #MainMenu { visibility: hidden; }
-        footer { visibility: hidden; }
-        [data-testid="stDecoration"] { display: none; }
-        .stDeployButton { display: none; }
+        /* Hide Streamlit toolbar, GitHub icons, deploy button, manage badge & footer chrome */
+        #MainMenu,
+        footer,
+        [data-testid="stDecoration"],
+        [data-testid="stToolbar"],
+        [data-testid="stToolbarActions"],
+        [data-testid="stHeaderActionElements"],
+        [data-testid="stAppDeployButton"],
+        [data-testid="stDeployButton"],
+        [data-testid="manage-app-button"],
+        [data-testid="stStatusWidget"],
+        .stDeployButton,
+        .stAppDeployButton,
+        [class*="viewerBadge"],
+        [class*="profileContainer"],
+        header a[href*="github.com"],
+        footer a[href*="streamlit.io"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
         [data-testid="stHeader"] {
             background: transparent !important;
         }
