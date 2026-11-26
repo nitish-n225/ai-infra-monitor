@@ -197,23 +197,10 @@ if data_mode == "Live Fleet":
             else:
                 st.error(f"Could not reach `{backend_url}`.")
     elif not jwt_token:
-        col_preview, col_login = st.columns([1.45, 1])
-        with col_preview:
-            render_3d_ai_neural_core(
-                context_label="Enterprise AIOps Control Plane",
-                intent_label="AUTHENTICATION_READY",
-                confidence_label="STANDBY",
-                signals=[
-                    {"label": "Windows Agents", "detail": "psutil + Event Viewer live telemetry"},
-                    {"label": "FastAPI + PG", "detail": "Central PostgreSQL persistence"},
-                    {"label": "FAISS 384-d", "detail": "Real-time vector similarity search"},
-                    {"label": "RCA Engine", "detail": "6-category fault-tree analyzer"},
-                ],
-                height=310,
-            )
+        _, col_login, _ = st.columns([1, 1.35, 1])
         with col_login:
             st.markdown("### 🔐 Operator Sign-In")
-            st.caption("Sign in for live Windows fleet telemetry, or switch to **Log Analyzer** in the sidebar.")
+            st.caption("Authenticate to access real-time fleet telemetry, incidents, and endpoint controls.")
             with st.form("operator_login_form"):
                 u_in = st.text_input("Username", value="admin")
                 p_in = st.text_input("Password", type="password", placeholder="MONITOR_ADMIN_PASSWORD or Admin Key")
