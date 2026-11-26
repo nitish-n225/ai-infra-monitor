@@ -191,6 +191,34 @@ class InfrastructureAIAssistant:
         elif dataset_id:
             self.current_dataset_id = dataset_id
             
+        # Check greeting / capability help even before checking empty logs
+        q_norm = re.sub(r"[^a-z0-9\s]", "", clean_query.lower()).strip()
+        if q_norm in {"hi", "hello", "hey", "hii", "help", "menu", "commands"} or any(
+            p in clean_query.lower() for p in ["what can you do", "who are you", "how do you work", "help me"]
+        ):
+            log_cnt = 0 if df is None else len(df)
+            inc_cnt = len(rca_results.get("incidents", [])) if rca_results else 0
+            help_ans = (
+                "### 🤖 AI Infrastructure Assistant Ready\n"
+                f"Currently monitoring **`{log_cnt}`** log record(s) with **`{inc_cnt}`** detected RCA incident(s) "
+                f"(Health: **`{health_data.get('health_score', 100.0)}%`**).\n\n"
+                "**You can ask me anything about your infrastructure or logs, including:**\n"
+                "- **Summary & Timeline:** *\"Summarize the logs\"*, *\"What happened first?\"*, *\"Show the outage timeline\"*\n"
+                "- **Root Cause & Services:** *\"What are the critical incidents?\"*, *\"Why is the database failing?\"*, *\"Check auth-service\"*\n"
+                "- **Metrics & Risk:** *\"How was the health score calculated?\"*, *\"How many errors and warnings are there?\"*\n"
+                "- **Specific Events / Keywords:** *\"What happened at 10:03?\"*, *\"Tell me about exit code 137\"*, *\"Did autoscaler trigger?\"*\n"
+                "- **Safe Recovery:** *\"What recovery steps are recommended?\"*"
+            )
+            return {
+                "query": clean_query,
+                "answer": help_ans,
+                "intent": "ASSISTANT_HELP",
+                "confidence": "HIGH",
+                "evidence": [],
+                "provider": self.provider.provider_name,
+                "advisory_notice": SAFETY_ENFORCEMENT_NOTICE,
+            }
+
         # Check empty logs
         if df is None or df.empty:
             answer = (
@@ -273,12 +301,18 @@ class InfrastructureAIAssistant:
         evidence: List[Dict[str, Any]] = []
         
         # 1. Health Score Inquiry
-        if any(w in q_lower for w in ["health score", "health index", "calculate health", "health calculated", "why is health"]):
+        if any(w in q_lower for w in ["health score", "health index", "calculate health", "health calculated", "why is health", "health breakdown"]):
             score = health_data.get("health_score", 100.0)
             condition = health_data.get("condition", "Stable")
-            err_rate = health_data.get("error_rate_pct", 0.0)
-            penalties = health_data.get("penalties", [])
-            
+            total_logs = len(df)
+            err_mask = df["level"].isin(["CRITICAL", "FATAL", "ERROR"]) if "level" in df.columns else pd.Series([False] * total_logs)
+            computed_err_rate = round((int(err_mask.sum()) / total_logs) * 100, 1) if total_logs > 0 else 0.0
+            err_rate = health_data.get("error_rate_pct", computed_err_rate)
+            penalties = health_data.get("deductions_breakdown") or health_data.get("penalties") or []
+            degraded_svcs = health_data.get("degraded_services")
+            if degraded_svcs is None and "service" in df.columns:
+                degraded_svcs = df[err_mask]["service"].dropna().unique().tolist()
+
             lines = [
                 f"### 🩺 Infrastructure Health Score: **{score}%** (`{condition}`)",
                 f"- **Baseline Score**: Starts at `100.0%` for a fully operational cluster.",
@@ -287,27 +321,29 @@ class InfrastructureAIAssistant:
             ]
             if penalties:
                 for p in penalties:
-                    lines.append(f"  - Deduction: **-{p.get('deduction', 0)} pts** — {p.get('reason', '')}")
+                    detail = p.get("detail")
+                    suffix = f" ({detail})" if detail else ""
+                    lines.append(f"  - Deduction: **-{p.get('deduction', 0)} pts** — {p.get('reason', '')}{suffix}")
             else:
                 lines.append("  - No deductions applied. All telemetry metrics within healthy thresholds.")
-                
+
             lines.append("\n**Observed Telemetry Summary:**")
-            lines.append(f"- Total Ingested Logs: `{len(df)}` records.")
-            lines.append(f"- Degraded Services: `{len(health_data.get('degraded_services', []))}`")
-            
+            lines.append(f"- Total Ingested Logs: `{total_logs}` records.")
+            lines.append(f"- Degraded Services: `{len(degraded_svcs or [])}`")
+
             # Evidence from top errors
-            err_df = df[df["level"].isin(["CRITICAL", "FATAL", "ERROR"])].head(3)
+            err_df = df[err_mask].head(3)
             for _, r in err_df.iterrows():
                 evidence.append(self._row_to_evidence(r))
-                
+
             return ("HEALTH_SCORE_EXPLANATION", "\n".join(lines), evidence, "HIGH")
 
         # 2. Risk Score & Contributing Factors Inquiry
-        if any(w in q_lower for w in ["risk score", "failure risk", "factors increased", "contributing factors", "risk calculated", "why is risk"]):
+        if any(w in q_lower for w in ["risk score", "failure risk", "factors increased", "contributing factors", "risk calculated", "why is risk", "risk breakdown"]):
             score = risk_data.get("risk_score", 0.0)
             level = risk_data.get("risk_level", "LOW")
             factors = risk_data.get("contributing_factors", [])
-            
+
             lines = [
                 f"### ⚡ Predictive Failure Risk: **{score}/100** (`{level} RISK`)",
                 "The failure risk model synthesizes multiple operational vulnerability vectors:",
@@ -316,24 +352,29 @@ class InfrastructureAIAssistant:
             if factors:
                 for f in factors:
                     name = f.get("factor", "Unknown")
-                    weight = f.get("weight", "0%")
-                    detail = f.get("detail", "")
-                    pts = f.get("points", 0)
-                    lines.append(f"- **{name}** (Weight: `{weight}`, Impact: `+{pts} pts`): {detail}")
+                    if "max_weight" in f:
+                        weight_str = f"{f.get('score', 0)}/{f.get('max_weight', 0)} pts"
+                        detail = f.get("metric", "") or f.get("impact", "")
+                        lines.append(f"- **{name}** (Weight: `{weight_str}`): {detail}")
+                    else:
+                        weight = f.get("weight", "0%")
+                        detail = f.get("detail", "")
+                        pts = f.get("points", 0)
+                        lines.append(f"- **{name}** (Weight: `{weight}`, Impact: `+{pts} pts`): {detail}")
             else:
                 lines.append("- No high-risk factors detected in the active log telemetry.")
-                
+
             lines.append(f"\n*Summary Assessment*: Infrastructure failure probability is classified as **{level}** based on active incident cascading and severity distributions.")
-            
+
             # Evidence from critical incidents
             crit_df = df[df["level"].isin(["CRITICAL", "FATAL"])].head(3)
             for _, r in crit_df.iterrows():
                 evidence.append(self._row_to_evidence(r))
-                
+
             return ("RISK_SCORE_EXPLANATION", "\n".join(lines), evidence, "HIGH")
 
         # 3. Critical Incidents Overview Inquiry
-        if any(w in q_lower for w in ["most critical", "critical incident", "what incidents", "fatal errors", "what went wrong", "list incidents"]):
+        if any(w in q_lower for w in ["most critical", "critical incident", "what incidents", "fatal errors", "what went wrong", "list incidents", "all incidents", "any incidents", "major issue", "outages"]):
             incidents = rca_results.get("incidents", [])
             total_inc = rca_results.get("total_incidents", 0)
             
@@ -368,19 +409,41 @@ class InfrastructureAIAssistant:
                     
             return ("CRITICAL_INCIDENTS", "\n".join(lines), evidence, "HIGH")
 
+        # 3b. Specific Service Name Inspection (dynamic across any monitored service in df)
+        if "service" in df.columns and not any(w in q_lower for w in ["why", "root cause", "recovery", "affected services"]):
+            unique_services = [str(s) for s in df["service"].dropna().unique().tolist() if str(s).strip()]
+            matched_svcs = [s for s in unique_services if s.lower() in q_lower]
+            if matched_svcs:
+                target_svc = matched_svcs[0]
+                svc_df = df[df["service"] == target_svc]
+                sev_counts = svc_df["level"].value_counts().to_dict() if "level" in svc_df.columns else {}
+                lines = [
+                    f"### 🧩 Service Inspection: **`{target_svc}`**",
+                    f"- **Total Events Recorded**: `{len(svc_df)}`",
+                    f"- **Severity Breakdown**: {', '.join(f'`{k}: {v}`' for k, v in sev_counts.items()) or 'N/A'}",
+                    "",
+                    "**Recent Activity**:",
+                ]
+                for _, r in svc_df.head(5).iterrows():
+                    lines.append(f"- **Line {r.get('line_no')}** `[{r.get('timestamp')}]` **[{r.get('level')}]**: `{r.get('message')}`")
+                    evidence.append(self._row_to_evidence(r))
+                return ("SERVICE_INSPECTION", "\n".join(lines), evidence, "HIGH")
+
         # 4. Service-Specific Root Cause (e.g. database, redis, memory, network, auth, cpu, storage)
         domain_keywords = {
             "database": ["database", "db", "postgres", "sql", "pool", "slots"],
-            "memory": ["memory", "oom", "killed process", "ram", "leak", "redis"],
-            "network": ["network", "gateway", "latency", "upstream", "timeout", "circuit breaker", "dns"],
+            "memory": ["memory", "oom", "killed process", "ram", "leak", "redis", "maxmemory"],
+            "network": ["network", "gateway", "latency", "upstream", "timeout", "circuit breaker", "dns", "504"],
             "cpu": ["cpu", "load", "utilization", "throttle", "throttling"],
-            "auth": ["auth", "unauthorized", "token", "jwt", "permission", "credentials", "forbidden"],
-            "storage": ["storage", "disk", "iops", "full", "filesystem", "space"]
+            "auth": ["auth", "unauthorized", "token", "jwt", "permission", "credentials", "forbidden", "logon"],
+            "storage": ["storage", "disk", "iops", "filesystem", "space", "ntfs"]
         }
-        
+
         matched_domain = None
         for dom, kws in domain_keywords.items():
-            if any(k in q_lower for k in kws) and any(trigger in q_lower for trigger in ["why", "cause", "fail", "error", "down", "issue", "what happened"]):
+            has_dom_kw = any(re.search(rf"\b{re.escape(k)}\b", q_lower) if len(k) <= 3 else (k in q_lower) for k in kws)
+            has_trigger = any(tr in q_lower for tr in ["why", "cause", "fail", "error", "down", "issue", "what happened", "check", "status", "about", "explain", "problem", "find", "logs", "show"])
+            if has_dom_kw and (has_trigger or len(q_lower.split()) <= 3):
                 matched_domain = dom
                 break
                 
@@ -440,7 +503,7 @@ class InfrastructureAIAssistant:
                     )
 
         # 5. Affected Services Inquiry
-        if any(w in q_lower for w in ["affected services", "services affected", "which services", "components affected", "what is down", "services down"]):
+        if any(w in q_lower for w in ["affected services", "services affected", "which services", "components affected", "what is down", "services down", "list services", "all services", "healthy services"]):
             services = df["service"].dropna().unique().tolist()
             err_df = df[df["level"].isin(["CRITICAL", "FATAL", "ERROR"])]
             affected_svcs = err_df["service"].dropna().unique().tolist()
@@ -472,7 +535,7 @@ class InfrastructureAIAssistant:
             return ("AFFECTED_SERVICES", "\n".join(lines), evidence, "HIGH")
 
         # 6. Recovery Recommendations / Playbooks Inquiry
-        if any(w in q_lower for w in ["recovery steps", "recommended recovery", "how to fix", "remediation", "healing actions", "playbooks", "fix the issue"]):
+        if any(w in q_lower for w in ["recovery", "how to fix", "remediation", "healing", "playbooks", "fix the issue", "what should i do", "mitigate", "resolve", "solve", "next steps"]):
             recs = SelfHealingEngine.generate_recommendations(rca_results)
             
             if not recs:
@@ -519,7 +582,7 @@ class InfrastructureAIAssistant:
             return ("RECOVERY_RECOMMENDATIONS", "\n".join(lines), [], "HIGH")
 
         # 7. Evidence Request / Supporting Data Inquiry
-        if any(w in q_lower for w in ["show evidence", "what is the evidence", "supporting evidence", "cite evidence", "show proof"]):
+        if any(w in q_lower for w in ["show evidence", "what is the evidence", "supporting evidence", "cite evidence", "show proof", "evidence supporting"]):
             incidents = rca_results.get("incidents", [])
             if not incidents:
                 return (
@@ -543,6 +606,104 @@ class InfrastructureAIAssistant:
                 lines.append("")
                 
             return ("EVIDENCE_INQUIRY", "\n".join(lines), evidence, "HIGH")
+
+        # 7c. Executive Summary / General Status Inquiry
+        if any(w in q_lower for w in ["summary", "summarize", "overview", "status", "report", "explain logs", "what is happening", "how is the system", "everything ok", "tell me about the logs", "analyze"]):
+            total_logs = len(df)
+            lvl_counts = df["level"].value_counts().to_dict() if "level" in df.columns else {}
+            incidents = rca_results.get("incidents", [])
+            svcs = df["service"].dropna().unique().tolist() if "service" in df.columns else []
+            lines = [
+                "### 📊 Infrastructure Executive Summary",
+                f"- **Health Index**: `{health_data.get('health_score', 100.0)}%` (`{health_data.get('condition', 'Stable')}`)",
+                f"- **Failure Risk**: `{risk_data.get('risk_score', 0.0)}/100` (`{risk_data.get('risk_level', 'LOW')}`)",
+                f"- **Parsed Logs**: `{total_logs}` events across `{len(svcs)}` services "
+                f"(`CRITICAL/FATAL: {lvl_counts.get('CRITICAL', 0) + lvl_counts.get('FATAL', 0)}`, "
+                f"`ERROR: {lvl_counts.get('ERROR', 0)}`, `WARN: {lvl_counts.get('WARN', 0)}`, `INFO: {lvl_counts.get('INFO', 0)}`)",
+                f"- **Active RCA Incidents**: `{len(incidents)}`",
+                "",
+            ]
+            if incidents:
+                lines.append("**Key Findings**:")
+                for inc in incidents:
+                    lines.append(f"- **[{inc.get('severity')}] {inc.get('title')}** — {inc.get('likely_root_cause')}")
+            else:
+                lines.append("🟢 All services are operating normally with zero detected failure signatures.")
+            err_rows = df[df["level"].isin(["CRITICAL", "FATAL", "ERROR"])].head(4)
+            if err_rows.empty:
+                err_rows = df.head(3)
+            for _, r in err_rows.iterrows():
+                evidence.append(self._row_to_evidence(r))
+            return ("EXECUTIVE_SUMMARY", "\n".join(lines), evidence, "HIGH")
+
+        # 7d. Chronological Timeline / Cascade Inquiry
+        if any(w in q_lower for w in ["timeline", "chronology", "sequence", "what happened first", "when did", "cascade", "order", "start", "normalized", "recover"]):
+            anom_df = df[df["level"].isin(["WARN", "WARNING", "ERROR", "CRITICAL", "FATAL"])]
+            target_df = anom_df if not anom_df.empty else df
+            lines = [
+                "### ⏱️ Chronological Event Timeline",
+                f"Showing **{min(len(target_df), 8)}** key events in execution order:",
+                "",
+            ]
+            for _, r in target_df.head(8).iterrows():
+                lines.append(f"- **Line {r.get('line_no')}** `[{r.get('timestamp')}]` `[{r.get('service')}]` **[{r.get('level')}]**: `{r.get('message')}`")
+                evidence.append(self._row_to_evidence(r))
+            return ("TIMELINE_ANALYSIS", "\n".join(lines), evidence, "HIGH")
+
+        # 7e. Log Counts / Severity Filtering Inquiry
+        if any(w in q_lower for w in ["how many", "count", "warnings", "errors", "critical logs", "total logs", "show logs", "list logs", "stats", "statistics"]):
+            lvl_counts = df["level"].value_counts().to_dict() if "level" in df.columns else {}
+            filter_lvls = ["CRITICAL", "FATAL", "ERROR", "WARN"]
+            if "warn" in q_lower and "error" not in q_lower:
+                filter_lvls = ["WARN", "WARNING"]
+            elif "error" in q_lower and "warn" not in q_lower:
+                filter_lvls = ["ERROR", "CRITICAL", "FATAL"]
+            elif "info" in q_lower:
+                filter_lvls = ["INFO"]
+            matched_rows = df[df["level"].isin(filter_lvls)] if "level" in df.columns else df
+            lines = [
+                "### 📈 Log Telemetry Statistics",
+                f"- **Total Events**: `{len(df)}`",
+                "- **By Severity**: " + (", ".join(f"`{k}: {v}`" for k, v in lvl_counts.items()) or "None"),
+                "",
+                f"**Sample Matching Events ({len(matched_rows)} total)**:",
+            ]
+            for _, r in matched_rows.head(5).iterrows():
+                lines.append(f"- **Line {r.get('line_no')}** `[{r.get('service')}]` **[{r.get('level')}]**: `{r.get('message')}`")
+                evidence.append(self._row_to_evidence(r))
+            return ("LOG_STATS_AND_FILTER", "\n".join(lines), evidence, "HIGH")
+
+        # 7f. Direct Keyword / Substring Log Search (catches arbitrary log-grounded questions!)
+        stop_words = {
+            "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
+            "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+            "do", "does", "did", "can", "could", "should", "would", "will", "shall",
+            "the", "and", "for", "with", "from", "into", "about", "there", "this",
+            "that", "these", "those", "tell", "show", "find", "give", "logs", "log",
+            "event", "events", "system", "infrastructure", "any", "all", "please",
+        }
+        tokens = [t for t in re.findall(r"[a-z0-9_.\-:]+", q_lower) if len(t) >= 3 and t not in stop_words]
+        if tokens and not df.empty:
+            searchable = (
+                df["message"].fillna("").str.lower()
+                + " " + df["service"].fillna("").str.lower()
+                + " " + df["level"].fillna("").str.lower()
+                + " " + df["timestamp"].fillna("").str.lower()
+            )
+            scores = searchable.apply(lambda txt: sum(1 for tok in tokens if tok in txt))
+            hit_df = df[scores > 0].copy()
+            if not hit_df.empty:
+                hit_df["_hits"] = scores[scores > 0]
+                hit_df = hit_df.sort_values(by=["_hits", "line_no"], ascending=[False, True])
+                lines = [
+                    f"### 🔍 Grounded Log Matches for *\"{query}\"*",
+                    f"Found **`{len(hit_df)}`** log event(s) matching your query:",
+                    "",
+                ]
+                for _, r in hit_df.head(5).iterrows():
+                    lines.append(f"- **Line {r.get('line_no')}** `[{r.get('timestamp')}]` `[{r.get('service')}]` **[{r.get('level')}]**: `{r.get('message')}`")
+                    evidence.append(self._row_to_evidence(r))
+                return ("KEYWORD_LOG_SEARCH", "\n".join(lines), evidence, "HIGH")
 
         # 8. Semantic Search Query Fallback (Stage 3 FAISS Integration)
         if vector_store and vector_store.get_stats().get("total_vectors", 0) > 0:

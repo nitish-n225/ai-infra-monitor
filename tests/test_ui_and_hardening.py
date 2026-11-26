@@ -145,6 +145,57 @@ def test_csv_and_json_array_upload_parsing():
     print("[PASS] CSV and JSON-array log upload parsing verified.")
 
 
+def test_assistant_broad_general_queries():
+    from src.parser import InfrastructureLogParser
+    from src.sample_data import load_sample_log
+    from src.rca_engine import RootCauseAnalysisEngine
+    from src.health_score import InfrastructureHealthScorer
+    from src.predictive_failure import PredictiveFailureDetector
+    from src.assistant_engine import InfrastructureAIAssistant
+
+    df = InfrastructureLogParser.parse_text(load_sample_log("production_incident.log"))
+    rca = RootCauseAnalysisEngine.analyze_logs(df)
+    health = InfrastructureHealthScorer.calculate_health(df)
+    risk = PredictiveFailureDetector.assess_risk(df, rca)
+    assistant = InfrastructureAIAssistant()
+
+    # Greeting / Help
+    r_hi = assistant.ask("hello", df, rca, health, risk, dataset_id="prod")
+    assert r_hi["intent"] == "ASSISTANT_HELP"
+
+    # Executive Summary
+    r_sum = assistant.ask("Summarize the logs", df, rca, health, risk, dataset_id="prod")
+    assert r_sum["intent"] == "EXECUTIVE_SUMMARY"
+    assert str(health["health_score"]) in r_sum["answer"]
+
+    # Chronological Timeline
+    r_tl = assistant.ask("What happened first in the timeline?", df, rca, health, risk, dataset_id="prod")
+    assert r_tl["intent"] == "TIMELINE_ANALYSIS"
+    assert len(r_tl["evidence"]) >= 1
+
+    # Service Deep-Dive
+    r_svc = assistant.ask("Check cache-redis-01 status", df, rca, health, risk, dataset_id="prod")
+    assert r_svc["intent"] == "SERVICE_INSPECTION"
+    assert "cache-redis-01" in r_svc["answer"]
+
+    # Counts & Keyword Search
+    r_cnt = assistant.ask("How many errors and warnings are there?", df, rca, health, risk, dataset_id="prod")
+    assert r_cnt["intent"] == "LOG_STATS_AND_FILTER"
+
+    r_kw = assistant.ask("Tell me about exit code 137", df, rca, health, risk, dataset_id="prod")
+    assert r_kw["intent"] in ("KEYWORD_LOG_SEARCH", "ROOT_CAUSE_EXPLANATION")
+    assert len(r_kw["evidence"]) >= 1
+
+    # Real health deductions & risk weights (not empty / zero)
+    r_h = assistant.ask("How was the health score calculated?", df, rca, health, risk, dataset_id="prod")
+    assert "-50.0 pts" in r_h["answer"] or "-18" in r_h["answer"] or "deduction" in r_h["answer"].lower()
+
+    # Anti-hallucination guardrail preserved
+    r_unk = assistant.ask("What is the GPU thermal throttling temperature in datacenter zone 4?", df, rca, health, risk, dataset_id="prod")
+    assert r_unk["intent"] == "INSUFFICIENT_EVIDENCE"
+    print("[PASS] Broad general AI Assistant queries and real health/risk breakdown verified.")
+
+
 if __name__ == "__main__":
     print("=" * 65)
     print("Running UI Integrity & Enterprise Hardening Tests")
@@ -153,6 +204,7 @@ if __name__ == "__main__":
     test_lightweight_embedding_and_numpy_fallback()
     test_realtime_bridge_session_isolation()
     test_csv_and_json_array_upload_parsing()
+    test_assistant_broad_general_queries()
     print("=" * 65)
     print("[SUCCESS] All UI & enterprise hardening checks passed!")
     print("=" * 65)
