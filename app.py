@@ -37,6 +37,7 @@ from src.ui.components import (
     render_assistant_faq_grid,
     render_hero_header,
     render_luxury_login_header,
+    render_luxury_login_showcase,
 )
 from src.ui.live_views import (
     render_fleet_admin_tab,
@@ -200,8 +201,11 @@ if data_mode == "Live Fleet":
             else:
                 st.error(f"Could not reach `{backend_url}`.")
     elif not jwt_token:
-        _, col_login, _ = st.columns([0.9, 1.35, 0.9])
-        with col_login:
+        st.markdown("<div style='height:0.65rem;'></div>", unsafe_allow_html=True)
+        col_pad_l, col_showcase, col_portal, col_pad_r = st.columns([0.12, 1.18, 1.0, 0.12], gap="large")
+        with col_showcase:
+            render_luxury_login_showcase(height=475)
+        with col_portal:
             render_luxury_login_header()
             with st.form("operator_login_form"):
                 u_in = st.text_input("Username", value="admin")

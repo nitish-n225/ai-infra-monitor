@@ -394,6 +394,16 @@ def apply_custom_styles() -> None:
             animation: motionEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
         }
+        .metric-card::after {
+            content: "";
+            position: absolute;
+            top: 0; left: -120%;
+            width: 75%; height: 100%;
+            background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.85) 50%, transparent 80%);
+            transform: skewX(-18deg);
+            pointer-events: none;
+            transition: left 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .metric-card:hover {
             transform: translateY(-5px) rotateX(2deg) rotateY(-1deg);
             border-color: rgba(99, 102, 241, 0.55);
@@ -402,6 +412,9 @@ def apply_custom_styles() -> None:
                 inset 0 1px 0 #ffffff,
                 0 24px 50px -12px rgba(0, 0, 0, 0.72),
                 0 0 26px -6px rgba(156, 64, 255, 0.35);
+        }
+        .metric-card:hover::after {
+            left: 140%;
         }
         .metric-label {
             font-size: 0.69rem;
@@ -599,6 +612,283 @@ def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: 
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_luxury_login_showcase(height: int = 470) -> None:
+    """
+    Renders a self-contained 60fps interactive 3D Orbital Security Core showcase
+    for the executive split-screen login portal.
+    """
+    html_doc = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8" />
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      body {{
+        background: transparent;
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        color: #f8fafc;
+        overflow: hidden;
+      }}
+      @property --beam {{
+        syntax: '<angle>';
+        initial-value: 0deg;
+        inherits: false;
+      }}
+      @keyframes beamSpin {{
+        to {{ --beam: 360deg; }}
+      }}
+      .stage {{
+        position: relative;
+        width: 100%;
+        height: {height - 4}px;
+        border-radius: 20px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 20% 15%, rgba(156, 64, 255, 0.22), transparent 52%),
+          radial-gradient(circle at 82% 85%, rgba(255, 170, 64, 0.16), transparent 55%),
+          radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.10), #060813 78%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.16),
+          0 28px 60px -16px rgba(0, 0, 0, 0.85);
+      }}
+      .stage::before {{
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 1.5px;
+        border-radius: 20px;
+        background: conic-gradient(
+          from var(--beam, 0deg),
+          transparent 0deg 245deg,
+          #ffaa40 285deg,
+          #9c40ff 325deg,
+          #38bdf8 352deg,
+          transparent 360deg
+        );
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        animation: beamSpin 8s linear infinite;
+      }}
+      canvas {{
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+      }}
+      canvas:active {{ cursor: grabbing; }}
+      .top-bar {{
+        position: absolute;
+        top: 16px; left: 18px; right: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+      }}
+      .badge {{
+        display: inline-flex; align-items: center; gap: 7px;
+        background: rgba(10, 12, 22, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #e2e8f0;
+        backdrop-filter: blur(10px);
+      }}
+      .dot {{
+        width: 7px; height: 7px; border-radius: 50%;
+        background: #ffaa40;
+        box-shadow: 0 0 10px #ffaa40;
+      }}
+      .drag-hint {{
+        font-size: 11px; color: #94a3b8;
+        background: rgba(10, 12, 22, 0.72);
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }}
+      .bottom-panel {{
+        position: absolute;
+        left: 16px; right: 16px; bottom: 16px;
+        background: rgba(9, 11, 20, 0.80);
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 14px;
+        padding: 12px 15px;
+        backdrop-filter: blur(12px);
+        pointer-events: none;
+      }}
+      .bp-title {{
+        font-size: 15px;
+        font-weight: 700;
+        background: linear-gradient(95deg, #ffffff 0%, #fde68a 45%, #7dd3fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+      }}
+      .bp-sub {{
+        font-size: 11.5px;
+        color: #94a3b8;
+        margin-bottom: 9px;
+      }}
+      .chips {{
+        display: flex; flex-wrap: wrap; gap: 7px;
+      }}
+      .chip {{
+        font-size: 10.5px; font-weight: 600;
+        padding: 4px 9px; border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #e2e8f0;
+      }}
+    </style>
+    </head>
+    <body>
+      <div class="stage">
+        <canvas id="globeCanvas"></canvas>
+        <div class="top-bar">
+          <div class="badge"><span class="dot"></span> AUTONOMOUS TELEMETRY FABRIC</div>
+          <div class="drag-hint">Drag 3D Core</div>
+        </div>
+        <div class="bottom-panel">
+          <div class="bp-title">AI Infrastructure Command &amp; Intelligence</div>
+          <div class="bp-sub">Real-time host surveillance, semantic FAISS indexing &amp; root cause graph engine.</div>
+          <div class="chips">
+            <span class="chip">⚡ Sub-Second Telemetry</span>
+            <span class="chip">🧠 384-D Vector Search</span>
+            <span class="chip">🛡️ Fault-Tree RCA</span>
+            <span class="chip">🔒 Zero-Trust JWT</span>
+          </div>
+        </div>
+      </div>
+      <script>
+        const canvas = document.getElementById("globeCanvas");
+        const ctx = canvas.getContext("2d");
+        let W = 500, H = 460;
+        function resize() {{
+          const dpr = window.devicePixelRatio || 1;
+          const r = canvas.parentElement.getBoundingClientRect();
+          W = Math.max(280, r.width);
+          H = Math.max(260, r.height);
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }}
+        resize();
+        window.addEventListener("resize", resize);
+        if (window.ResizeObserver && canvas.parentElement) {{
+          new ResizeObserver(() => resize()).observe(canvas.parentElement);
+        }}
+
+        // Fibonacci 3D geodesic sphere points
+        const N = 150;
+        const pts = [];
+        const golden = Math.PI * (3 - Math.sqrt(5));
+        for (let i = 0; i < N; i++) {{
+          const y = 1 - (i / (N - 1)) * 2;
+          const rad = Math.sqrt(Math.max(0, 1 - y * y));
+          const th = golden * i;
+          const palette = i % 5 === 0 ? "#ffaa40" : (i % 3 === 0 ? "#9c40ff" : "#38bdf8");
+          pts.push({{ x: Math.cos(th) * rad, y, z: Math.sin(th) * rad, color: palette }});
+        }}
+
+        let yaw = 0.4, pitch = 0.28, dragging = false, lx = 0, ly = 0;
+        canvas.addEventListener("pointerdown", e => {{ dragging = true; lx = e.clientX; ly = e.clientY; }});
+        window.addEventListener("pointerup", () => dragging = false);
+        window.addEventListener("pointermove", e => {{
+          if (!dragging) return;
+          yaw += (e.clientX - lx) * 0.008;
+          pitch = Math.max(-1.1, Math.min(1.1, pitch + (e.clientY - ly) * 0.008));
+          lx = e.clientX; ly = e.clientY;
+        }});
+
+        function proj3D(x, y, z, r, cyOff) {{
+          const cy = Math.cos(yaw), sy = Math.sin(yaw);
+          const cp = Math.cos(pitch), sp = Math.sin(pitch);
+          const x1 = x * cy - z * sy;
+          const z1 = x * sy + z * cy;
+          const y2 = y * cp - z1 * sp;
+          const z2 = y * sp + z1 * cp;
+          const sc = 360 / (360 + z2 * r);
+          return {{ sx: W * 0.5 + x1 * r * sc, sy: cyOff + y2 * r * sc, z: z2, sc }};
+        }}
+
+        let t = 0;
+        function draw() {{
+          ctx.clearRect(0, 0, W, H);
+          if (!dragging) yaw += 0.0045;
+          t += 0.025;
+          const R = Math.min(W, H) * 0.255;
+          const centerY = H * 0.41;
+
+          // Subtle concentric radar halos
+          for (let k = 1; k <= 3; k++) {{
+            ctx.beginPath();
+            ctx.arc(W * 0.5, centerY, R * (0.95 + k * 0.25), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(156, 64, 255, ${{0.14 - k * 0.03}})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }}
+
+          // Tilted orbital telemetry rings + satellites
+          for (let ring = 0; ring < 2; ring++) {{
+            const tilt = ring === 0 ? 0.55 : -0.62;
+            const ringR = 1.38 + ring * 0.18;
+            ctx.beginPath();
+            for (let a = 0; a <= 64; a++) {{
+              const ang = (a / 64) * Math.PI * 2;
+              const rx = Math.cos(ang) * ringR;
+              const ry = Math.sin(ang) * Math.sin(tilt) * ringR;
+              const rz = Math.sin(ang) * Math.cos(tilt) * ringR;
+              const p = proj3D(rx, ry, rz, R, centerY);
+              if (a === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+            }}
+            ctx.strokeStyle = ring === 0 ? "rgba(255, 170, 64, 0.34)" : "rgba(56, 189, 248, 0.30)";
+            ctx.lineWidth = 1.25;
+            ctx.stroke();
+
+            const satA = t * (ring === 0 ? 1.1 : -0.85) + ring * 2;
+            const sp = proj3D(
+              Math.cos(satA) * ringR,
+              Math.sin(satA) * Math.sin(tilt) * ringR,
+              Math.sin(satA) * Math.cos(tilt) * ringR,
+              R, centerY
+            );
+            ctx.beginPath();
+            ctx.arc(sp.sx, sp.sy, 4.2 * sp.sc, 0, Math.PI * 2);
+            ctx.fillStyle = ring === 0 ? "#ffaa40" : "#38bdf8";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }}
+
+          // Geodesic points sorted back-to-front
+          const mapped = pts.map(pt => ({{ pt, p: proj3D(pt.x, pt.y, pt.z, R, centerY) }}))
+                            .sort((a, b) => b.p.z - a.p.z);
+          for (const item of mapped) {{
+            const alpha = Math.max(0.18, Math.min(1, 0.62 - item.p.z * 0.42));
+            ctx.beginPath();
+            ctx.arc(item.p.sx, item.p.sy, Math.max(1.2, 2.7 * item.p.sc), 0, Math.PI * 2);
+            ctx.fillStyle = item.pt.color;
+            ctx.globalAlpha = alpha;
+            ctx.fill();
+          }}
+          ctx.globalAlpha = 1;
+          requestAnimationFrame(draw);
+        }}
+        draw();
+      </script>
+    </body>
+    </html>
+    """
+    components.html(html_doc, height=height, scrolling=False)
 
 
 def render_luxury_login_header() -> None:
