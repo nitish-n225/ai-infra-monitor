@@ -19,7 +19,7 @@ def apply_custom_styles() -> None:
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         :root {
             --bg-root: #040408;
@@ -40,7 +40,8 @@ def apply_custom_styles() -> None:
         }
 
         html, body, [class*="css"] {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-style: normal;
         }
 
         /* Clean Streamlit chrome */
@@ -208,7 +209,7 @@ def apply_custom_styles() -> None:
         .block-container {
             position: relative;
             z-index: 1;
-            padding-top: 1.3rem;
+            padding-top: 2.2rem;
             padding-bottom: 2.6rem;
             max-width: 1460px;
             perspective: 1600px;
@@ -331,10 +332,11 @@ def apply_custom_styles() -> None:
             right: 1.6rem;
             top: 50%;
             transform: translateY(-50%);
-            font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
-            font-size: 3.6rem;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-style: normal;
+            font-size: 2.8rem;
             font-weight: 800;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.04em;
             color: rgba(255, 255, 255, 0.032);
             white-space: nowrap;
             pointer-events: none;
@@ -384,10 +386,11 @@ def apply_custom_styles() -> None:
             animation: magicShinySweep 4.5s linear infinite;
         }
         .hero-title {
-            font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
-            font-size: 1.48rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-style: normal;
+            font-size: 1.38rem;
+            font-weight: 700;
+            letter-spacing: -0.015em;
             background: linear-gradient(95deg, #ffffff 0%, #ffe6b3 38%, #d8b4fe 72%, #7dd3fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
