@@ -60,6 +60,9 @@ def test_ui_modules_compile_and_escape():
     assert callable(render_assistant_faq_grid)
     assert callable(render_voice_assistant_bar)
     assert callable(render_voice_assistant_controls)
+    from src.ui.components import _transcribe_wav_bytes
+    txt, err = _transcribe_wav_bytes(b"")
+    assert txt is None and err is not None
     assert callable(render_3d_gauge_pair)
     assert callable(render_3d_rca_fault_graph)
     assert callable(render_3d_topology_scene)
