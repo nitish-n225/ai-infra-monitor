@@ -758,30 +758,358 @@ def render_3d_topology_scene(
 def render_3d_vector_constellation(
     query: str,
     results: List[Dict[str, Any]],
-    height: int = 330,
+    height: int = 350,
 ) -> None:
     """
-    Renders an interactive 3D FAISS Semantic Similarity Constellation:
-    Query sits at the 3D origin; matched logs orbit at radius proportional to (1 - similarity).
+    Renders a distinct, industry-grade 3D FAISS Vector Space Hypercube & Cosine Radar:
+    - 3D Bounding Hypercube + X/Y/Z embedding axes + concentric cosine shells
+    - Radiant 3D Query Star Crystal at the origin (0,0,0)
+    - Matched log vectors placed in 3D Fibonacci sphere coordinates at radius ~ (100 - similarity_pct)
     """
-    nodes = []
-    for item in results[:15]:
+    pts = []
+    top_score = 0.0
+    for item in results[:18]:
         sim_pct = float(item.get("similarity_pct", 50.0))
+        top_score = max(top_score, sim_pct)
+        raw_cos = item.get("similarity_score", round((sim_pct / 100.0) * 2.0 - 1.0, 3))
         sev = str(item.get("level", "INFO")).upper()
-        state = "critical" if sev in ("CRITICAL", "FATAL") else ("warning" if sev in ("ERROR", "WARN") else "healthy")
-        nodes.append({
-            "label": f"#{item.get('rank')} {item.get('service', 'svc')} ({sim_pct:.0f}%)",
-            "state": state,
-            "size": max(10.0, min(20.0, sim_pct / 5.5)),
-            "detail": f"[{sev}] {sim_pct:.1f}% Match<br>{esc(str(item.get('message', ''))[:95])}",
+        pts.append({
+            "rank": item.get("rank", len(pts) + 1),
+            "service": str(item.get("service", "svc")),
+            "sev": sev,
+            "sim_pct": sim_pct,
+            "raw_cos": raw_cos,
+            "detail": (
+                f"Rank #{esc(item.get('rank'))} &bull; [{esc(sev)}] &bull; "
+                f"{sim_pct:.1f}% Match (cos={esc(raw_cos)})<br>"
+                f"{esc(str(item.get('message', ''))[:105])}"
+            ),
         })
-    render_3d_topology_scene(
-        nodes=nodes,
-        center_label=f"Query: {query[:22]}",
-        center_sub="384-dim Vector Space",
-        title="3D Semantic Vector Constellation (FAISS Cosine Proximity)",
-        height=height,
-    )
+
+    payload_json = json.dumps({
+        "query": query[:34],
+        "points": pts,
+        "top_score": f"{top_score:.1f}%",
+    }, default=str)
+
+    html_doc = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8" />
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      body {{
+        background: radial-gradient(circle at 50% 50%, #140f2d 0%, #050814 80%);
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        color: #f8fafc;
+        overflow: hidden;
+        user-select: none;
+      }}
+      .wrap {{
+        position: relative;
+        width: 100%;
+        height: {height}px;
+        border-radius: 14px;
+        border: 1px solid rgba(168, 85, 247, 0.36);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.12),
+          0 18px 40px rgba(0,0,0,0.68),
+          0 0 36px -12px rgba(168, 85, 247, 0.28);
+        overflow: hidden;
+      }}
+      canvas {{ display: block; width: 100%; height: 100%; cursor: grab; }}
+      canvas:active {{ cursor: grabbing; }}
+      .hud-top {{
+        position: absolute; top: 10px; left: 12px; right: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        pointer-events: none;
+      }}
+      .hud-title {{
+        background: rgba(9, 7, 24, 0.84);
+        border: 1px solid rgba(192, 132, 252, 0.42);
+        padding: 5px 12px; border-radius: 999px;
+        font-size: 11.5px; font-weight: 700; color: #f3e8ff;
+        letter-spacing: 0.03em;
+      }}
+      .hud-btns {{ display: flex; gap: 6px; pointer-events: auto; }}
+      .hud-btn {{
+        background: rgba(15, 23, 42, 0.86);
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        color: #cbd5e1; border-radius: 7px; padding: 4px 9px;
+        font-size: 11px; font-weight: 600; cursor: pointer;
+      }}
+      .hud-btn:hover {{ border-color: #c084fc; color: #fff; }}
+      .hud-bottom {{
+        position: absolute; bottom: 10px; left: 12px; right: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        pointer-events: none; font-size: 11px;
+      }}
+      .chips {{ display: flex; gap: 7px; flex-wrap: wrap; }}
+      .chip {{
+        background: rgba(9, 7, 24, 0.84);
+        border: 1px solid rgba(192, 132, 252, 0.28);
+        padding: 4px 9px; border-radius: 8px; color: #cbd5e1;
+        font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+      }}
+      .tip {{
+        position: absolute; display: none; pointer-events: none;
+        background: rgba(8, 6, 22, 0.96);
+        border: 1px solid rgba(192, 132, 252, 0.6);
+        border-radius: 10px; padding: 8px 11px;
+        font-size: 11.5px; line-height: 1.45; color: #f1f5f9;
+        box-shadow: 0 14px 30px rgba(0,0,0,0.75);
+        max-width: 265px; z-index: 12;
+      }}
+    </style>
+    </head>
+    <body>
+      <div class="wrap" id="wrap">
+        <canvas id="vspace"></canvas>
+        <div class="hud-top">
+          <div class="hud-title">✨ 3D FAISS VECTOR HYPERCUBE &bull; &ldquo;{esc(query[:28])}&rdquo;</div>
+          <div class="hud-btns">
+            <button class="hud-btn" id="pauseBtn">⏸ Pause</button>
+            <button class="hud-btn" id="resetBtn">⟲ Reset 3D</button>
+          </div>
+        </div>
+        <div class="hud-bottom">
+          <div class="chips">
+            <span class="chip">SPACE: <strong style="color:#c084fc;">384-DIM</strong></span>
+            <span class="chip">INDEX: <strong style="color:#22d3ee;">IndexFlatIP</strong></span>
+            <span class="chip">MATCHES: <strong>{len(pts)}</strong></span>
+            <span class="chip">TOP MATCH: <strong style="color:#10b981;">{top_score:.1f}%</strong></span>
+          </div>
+          <span style="color:#94a3b8;">Closer to crystal = Higher similarity</span>
+        </div>
+        <div class="tip" id="tip"></div>
+      </div>
+      <script>
+        const CFG = {payload_json};
+        const canvas = document.getElementById("vspace");
+        const ctx = canvas.getContext("2d");
+        const wrap = document.getElementById("wrap");
+        const tip = document.getElementById("tip");
+        const escJs = (s) => String(s || "").replace(/[&<>"']/g, m => ({{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}}[m]));
+
+        let W = 800, H = {height}, dpr = window.devicePixelRatio || 1;
+        function resize() {{
+          W = wrap.clientWidth || 800;
+          H = wrap.clientHeight || {height};
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }}
+        resize();
+        window.addEventListener("resize", resize);
+
+        let yaw = 0.58, pitch = 0.32, zoom = 1.0, autoSpin = true;
+        let dragging = false, lx = 0, ly = 0, mx = -999, my = -999;
+        canvas.addEventListener("mousedown", e => {{ dragging = true; lx = e.clientX; ly = e.clientY; }});
+        window.addEventListener("mouseup", () => {{ dragging = false; }});
+        window.addEventListener("mousemove", e => {{
+          const r = canvas.getBoundingClientRect();
+          mx = e.clientX - r.left; my = e.clientY - r.top;
+          if (dragging) {{
+            yaw += (e.clientX - lx) * 0.0075;
+            pitch = Math.max(-1.2, Math.min(1.2, pitch + (e.clientY - ly) * 0.0075));
+            lx = e.clientX; ly = e.clientY;
+          }}
+        }});
+        canvas.addEventListener("wheel", e => {{
+          e.preventDefault();
+          zoom = Math.max(0.55, Math.min(1.85, zoom - e.deltaY * 0.0008));
+        }}, {{ passive: false }});
+        document.getElementById("pauseBtn").onclick = () => {{
+          autoSpin = !autoSpin;
+          document.getElementById("pauseBtn").textContent = autoSpin ? "⏸ Pause" : "▶ Orbit";
+        }};
+        document.getElementById("resetBtn").onclick = () => {{ yaw = 0.58; pitch = 0.32; zoom = 1.0; }};
+
+        // Wireframe Hypercube corners & edges
+        const C = 138;
+        const cubeV = [];
+        for (const x of [-C, C]) for (const y of [-C, C]) for (const z of [-C, C]) cubeV.push([x, y, z]);
+        const cubeE = [];
+        for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) {{
+          const d = (cubeV[i][0] !== cubeV[j][0]) + (cubeV[i][1] !== cubeV[j][1]) + (cubeV[i][2] !== cubeV[j][2]);
+          if (d === 1) cubeE.push([i, j]);
+        }}
+
+        // Place matched vectors in 3D Fibonacci sphere coordinates; closer = higher cosine match!
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+        const pts3D = CFG.points.map((pt, idx) => {{
+          const n = Math.max(CFG.points.length, 1);
+          const yDir = 1 - (idx / Math.max(n - 1, 1)) * 1.6 - 0.2;
+          const rAtY = Math.sqrt(Math.max(0.05, 1 - yDir * yDir));
+          const theta = goldenAngle * idx;
+          // Radial distance inversely maps similarity (95% -> ~58px, 45% -> ~132px)
+          const radial = Math.max(52, Math.min(134, 150 - pt.sim_pct * 0.95));
+          const col = pt.sev === "CRITICAL" || pt.sev === "FATAL" ? "#ef4444"
+                    : (pt.sim_pct >= 72 ? "#10b981" : (pt.sim_pct >= 55 ? "#22d3ee" : "#c084fc"));
+          return {{
+            ...pt,
+            x: Math.cos(theta) * rAtY * radial,
+            y: yDir * radial * 0.85,
+            z: Math.sin(theta) * rAtY * radial,
+            color: col
+          }};
+        }});
+
+        function proj(x, y, z) {{
+          const cy = Math.cos(yaw), sy = Math.sin(yaw);
+          const cp = Math.cos(pitch), sp = Math.sin(pitch);
+          const x1 = x * cy - z * sy;
+          const z1 = x * sy + z * cy;
+          const y2 = y * cp - z1 * sp;
+          const z2 = y * sp + z1 * cp;
+          const fov = 540 * zoom;
+          const sc = fov / (fov + z2 + 260);
+          return {{ sx: W / 2 + x1 * sc, sy: H / 2 + y2 * sc, sc, z: z2 }};
+        }}
+
+        function drawCrystal(sx, sy, r, t) {{
+          const top = {{ x: sx, y: sy - r * 1.35 }};
+          const bot = {{ x: sx, y: sy + r * 1.35 }};
+          const lft = {{ x: sx - r * 1.05, y: sy }};
+          const rgt = {{ x: sx + r * 1.05, y: sy }};
+          const mid = {{ x: sx + Math.sin(t * 2) * r * 0.28, y: sy + r * 0.12 }};
+          const faces = [
+            [top, lft, mid, "rgba(250, 204, 21, 0.9)"],
+            [top, mid, rgt, "rgba(34, 211, 238, 0.92)"],
+            [bot, lft, mid, "rgba(168, 85, 247, 0.85)"],
+            [bot, mid, rgt, "rgba(56, 189, 248, 0.88)"]
+          ];
+          ctx.shadowColor = "#fde047";
+          ctx.shadowBlur = 22;
+          for (const [a, b, c, fill] of faces) {{
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.closePath();
+            ctx.fillStyle = fill; ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.65)"; ctx.lineWidth = 0.8; ctx.stroke();
+          }}
+          ctx.shadowBlur = 0;
+        }}
+
+        let t = 0;
+        function render() {{
+          t += 0.016;
+          if (autoSpin && !dragging) yaw += 0.0038;
+          ctx.clearRect(0, 0, W, H);
+
+          // 1. 3D Wireframe Vector Hypercube
+          const cv = cubeV.map(v => proj(v[0], v[1], v[2]));
+          ctx.strokeStyle = "rgba(168, 85, 247, 0.22)";
+          ctx.lineWidth = 1.1;
+          for (const [a, b] of cubeE) {{
+            ctx.beginPath(); ctx.moveTo(cv[a].sx, cv[a].sy); ctx.lineTo(cv[b].sx, cv[b].sy); ctx.stroke();
+          }}
+
+          // 2. 3D X/Y/Z Embedding Axes
+          const axes = [
+            [[-150, 0, 0], [150, 0, 0], "Dim-X", "rgba(34,211,238,0.45)"],
+            [[0, -150, 0], [0, 150, 0], "Dim-Y", "rgba(192,132,252,0.45)"],
+            [[0, 0, -150], [0, 0, 150], "Dim-Z", "rgba(16,185,129,0.45)"]
+          ];
+          for (const [p1, p2, lbl, col] of axes) {{
+            const a = proj(p1[0], p1[1], p1[2]), b = proj(p2[0], p2[1], p2[2]);
+            ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy);
+            ctx.strokeStyle = col; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = col; ctx.font = "600 10px JetBrains Mono, monospace";
+            ctx.fillText(lbl, b.sx + 6, b.sy);
+          }}
+
+          // 3. Cosine Proximity Guide Rings
+          for (const rad of [65, 110]) {{
+            ctx.beginPath();
+            for (let k = 0; k <= 48; k++) {{
+              const ang = (k / 48) * Math.PI * 2;
+              const p = proj(Math.cos(ang) * rad, 0, Math.sin(ang) * rad);
+              if (k === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+            }}
+            ctx.strokeStyle = "rgba(192, 132, 252, 0.14)";
+            ctx.stroke();
+          }}
+
+          const origin = proj(0, 0, 0);
+          const projected = pts3D.map((pt, i) => ({{
+            pt,
+            p: proj(pt.x, pt.y + Math.sin(t + i) * 3, pt.z)
+          }}));
+
+          // 4. Cosine Vector Rays from Origin to Matches
+          for (const it of projected) {{
+            const {{ pt, p }} = it;
+            const grad = ctx.createLinearGradient(origin.sx, origin.sy, p.sx, p.sy);
+            grad.addColorStop(0, "rgba(253, 224, 71, 0.7)");
+            grad.addColorStop(1, pt.color);
+            ctx.beginPath(); ctx.moveTo(origin.sx, origin.sy); ctx.lineTo(p.sx, p.sy);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = pt.rank === 1 ? 2.4 : 1.35;
+            ctx.stroke();
+
+            // Midpoint cosine badge for top 3 matches
+            if (pt.rank <= 3) {{
+              const mxp = (origin.sx + p.sx) / 2, myp = (origin.sy + p.sy) / 2;
+              ctx.fillStyle = "rgba(8, 6, 22, 0.85)";
+              ctx.fillRect(mxp - 16, myp - 8, 32, 14);
+              ctx.fillStyle = pt.color;
+              ctx.font = "700 9.5px JetBrains Mono, monospace";
+              ctx.textAlign = "center";
+              ctx.fillText(Math.round(pt.sim_pct) + "%", mxp, myp + 2);
+            }}
+          }}
+
+          // 5. Depth-Sort Query Crystal + Matched Vector Nodes
+          const drawItems = [
+            {{ isCrystal: true, z: origin.z, p: origin }},
+            ...projected.map(it => ({{ isCrystal: false, z: it.p.z, p: it.p, pt: it.pt }}))
+          ].sort((a, b) => b.z - a.z);
+
+          let hovered = null;
+          for (const d of drawItems) {{
+            if (d.isCrystal) {{
+              drawCrystal(d.p.sx, d.p.sy, 16 * d.p.sc, t);
+              ctx.fillStyle = "#fef08a";
+              ctx.font = "700 10.5px Inter, sans-serif";
+              ctx.textAlign = "center";
+              ctx.fillText("QUERY", d.p.sx, d.p.sy + 26 * d.p.sc);
+            }} else {{
+              const rad = Math.max(8, (d.pt.rank === 1 ? 15 : 11.5) * d.p.sc);
+              const rg = ctx.createRadialGradient(d.p.sx - rad * 0.3, d.p.sy - rad * 0.3, rad * 0.1, d.p.sx, d.p.sy, rad);
+              rg.addColorStop(0, "#ffffff");
+              rg.addColorStop(0.32, d.pt.color);
+              rg.addColorStop(1, "#060414");
+              ctx.beginPath(); ctx.arc(d.p.sx, d.p.sy, rad, 0, Math.PI * 2);
+              ctx.fillStyle = rg;
+              ctx.shadowColor = d.pt.color; ctx.shadowBlur = d.pt.rank === 1 ? 20 : 12;
+              ctx.fill(); ctx.shadowBlur = 0;
+
+              ctx.fillStyle = "#f1f5f9";
+              ctx.font = "600 10px JetBrains Mono, monospace";
+              ctx.textAlign = "center";
+              ctx.fillText(`#${{d.pt.rank}} ${{d.pt.service}}`, d.p.sx, d.p.sy + rad + 12);
+
+              if (Math.hypot(mx - d.p.sx, my - d.p.sy) <= rad + 8) hovered = d;
+            }}
+          }}
+
+          if (hovered) {{
+            tip.style.display = "block";
+            tip.style.left = Math.min(W - 270, Math.max(10, hovered.p.sx + 14)) + "px";
+            tip.style.top = Math.min(H - 95, Math.max(10, hovered.p.sy - 14)) + "px";
+            tip.innerHTML = `<strong style="color:${{hovered.pt.color}}">#${{hovered.pt.rank}} ${{escJs(hovered.pt.service)}}</strong><br>${{hovered.pt.detail}}`;
+          }} else {{
+            tip.style.display = "none";
+          }}
+
+          requestAnimationFrame(render);
+        }}
+        render();
+      </script>
+    </body>
+    </html>
+    """
+    components.html(html_doc, height=height + 8, scrolling=False)
 
 
 def render_3d_rca_fault_graph(
