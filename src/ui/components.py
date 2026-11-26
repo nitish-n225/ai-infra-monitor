@@ -7,7 +7,9 @@ import html
 import io
 import json
 import re
+import wave
 from typing import Any, Dict, List, Optional
+import numpy as np
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -1673,30 +1675,70 @@ def render_assistant_faq_grid(key_prefix: str) -> Optional[str]:
     return selected
 
 
+def _normalize_wav_bytes(wav_bytes: bytes) -> tuple[bytes, int]:
+    """
+    Normalizes quiet 16-bit PCM WAV recordings from browser microphones.
+    Returns (normalized_wav_bytes, peak_amplitude).
+    """
+    with wave.open(io.BytesIO(wav_bytes), "rb") as wf:
+        nchannels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+        framerate = wf.getframerate()
+        frames = wf.readframes(wf.getnframes())
+
+    if sampwidth != 2 or not frames:
+        return wav_bytes, 1
+
+    samples = np.frombuffer(frames, dtype=np.int16)
+    peak = int(np.max(np.abs(samples))) if samples.size > 0 else 0
+    if peak == 0:
+        return wav_bytes, 0
+
+    if peak < 18000:
+        gain = min(20.0, 22000.0 / float(peak))
+        boosted = np.clip(samples.astype(np.float32) * gain, -32767.0, 32767.0).astype(np.int16)
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wf_out:
+            wf_out.setnchannels(nchannels)
+            wf_out.setsampwidth(sampwidth)
+            wf_out.setframerate(framerate)
+            wf_out.writeframes(boosted.tobytes())
+        return out.getvalue(), peak
+    return wav_bytes, peak
+
+
 def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Optional[str], Optional[str]]:
     """
-    Transcribes recorded WAV bytes using SpeechRecognition (with optional OpenAI Whisper fallback).
+    Transcribes recorded WAV bytes using SpeechRecognition after PCM gain normalization.
     Returns (transcript_text, error_reason).
     """
     if not wav_bytes or len(wav_bytes) < 100:
-        return None, "Recording was empty. Speak closer to the microphone."
+        return None, "Recording was empty. Click mic, speak, and stop."
     try:
         import speech_recognition as sr
     except ImportError:
         return None, "SpeechRecognition package is still installing or missing."
 
+    try:
+        norm_bytes, peak = _normalize_wav_bytes(wav_bytes)
+        if peak == 0:
+            return None, "Mic recorded pure silence — check your Windows/Edge microphone input is not muted."
+    except Exception:
+        norm_bytes = wav_bytes
+
     recognizer = sr.Recognizer()
     try:
-        with sr.AudioFile(io.BytesIO(wav_bytes)) as source:
-            recognizer.adjust_for_ambient_noise(source, duration=0.2)
+        with sr.AudioFile(io.BytesIO(norm_bytes)) as source:
             audio_data = recognizer.record(source)
-        text = recognizer.recognize_google(audio_data, language=language)
-        clean = (text or "").strip()
-        if clean:
-            return clean, None
-        return None, "Could not detect clear speech."
-    except sr.UnknownValueError:
-        return None, "No clear speech recognized — please speak a bit louder and try again."
+        for lang in (language, "en-US"):
+            try:
+                text = recognizer.recognize_google(audio_data, language=lang)
+                clean = (text or "").strip()
+                if clean:
+                    return clean, None
+            except sr.UnknownValueError:
+                continue
+        return None, "Speech was unclear — try speaking closer to the mic or check mic volume."
     except sr.RequestError as req_err:
         return None, f"Speech recognition service unavailable: {req_err}"
     except Exception as exc:
@@ -1706,14 +1748,14 @@ def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Op
 def render_voice_assistant_bar(
     latest_answer_text: str = "",
     latest_user_text: str = "",
-    height: int = 108,
+    height: int = 86,
 ) -> None:
     """
-    Renders a Live Closed Captions ([CC]) & Read-Aloud Voice Player synced to
-    speechSynthesis word/sentence boundaries.
+    Renders a clean YouTube-style rolling Closed Captions subtitle strip
+    paired with a Read-Aloud Speak button (no 'CC: ON' badge clutter).
     """
     clean_ai = re.sub(r"[`*_#>\[\]\(\)]", " ", latest_answer_text or "")
-    clean_ai = re.sub(r"\s+", " ", clean_ai).strip()[:750]
+    clean_ai = re.sub(r"\s+", " ", clean_ai).strip()[:900]
     clean_user = re.sub(r"\s+", " ", (latest_user_text or "")).strip()[:220]
     payload_json = json.dumps({"ai": clean_ai, "user": clean_user}, default=str)
 
@@ -1727,122 +1769,104 @@ def render_voice_assistant_bar(
       body {{
         background: transparent;
         font-family: Inter, system-ui, -apple-system, sans-serif;
-        color: #e2e8f0;
+        color: #f8fafc;
         overflow: hidden;
       }}
-      .cc-shell {{
+      .yt-cc-wrap {{
         height: {height - 6}px;
         display: flex;
-        flex-direction: column;
+        align-items: center;
         justify-content: space-between;
-        gap: 6px;
-        padding: 8px 12px;
+        gap: 10px;
+        padding: 8px 14px;
         border-radius: 12px;
-        background: rgba(8, 13, 28, 0.88);
-        border: 1px solid rgba(34, 211, 238, 0.34);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 22px rgba(0,0,0,0.48);
+        background: rgba(6, 8, 16, 0.84);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.52);
       }}
-      .top {{
-        display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      }}
-      .cc-badge {{
-        display: inline-flex; align-items: center; gap: 6px;
-        font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-        color: #67e8f9;
-      }}
-      .cc-pill {{
-        background: rgba(34, 211, 238, 0.16);
-        border: 1px solid rgba(34, 211, 238, 0.45);
-        color: #e0f2fe; border-radius: 5px; padding: 1px 5px;
-        font-family: "JetBrains Mono", monospace; font-size: 10px;
-      }}
-      .controls {{ display: flex; align-items: center; gap: 6px; }}
-      .btn {{
-        display: inline-flex; align-items: center; gap: 4px;
-        background: linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.96));
-        border: 1px solid rgba(34,211,238,0.42);
-        color: #e0f2fe; border-radius: 7px; padding: 3px 9px;
-        font-size: 11px; font-weight: 600; cursor: pointer;
-      }}
-      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 10px rgba(34,211,238,0.3); }}
-      .btn.active {{ border-color: #10b981; color: #a7f3d0; background: rgba(6, 78, 59, 0.65); }}
-      .cc-screen {{
+      .yt-captions {{
         flex: 1;
-        display: flex; flex-direction: column; justify-content: center; gap: 2px;
-        background: rgba(3, 6, 18, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        border-radius: 8px;
-        padding: 5px 10px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        text-align: center;
+      }}
+      .yt-you {{
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #67e8f9;
+        white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
       }}
-      .cc-line {{
-        font-size: 11.5px; line-height: 1.35;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      .yt-sub {{
+        display: inline-block;
+        margin: 0 auto;
+        max-width: 100%;
+        padding: 3px 10px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.72);
+        font-size: 12.5px;
+        line-height: 1.35;
+        color: #f8fafc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }}
-      .cc-you {{ color: #fde68a; font-weight: 600; }}
-      .cc-ai {{ color: #e2e8f0; }}
-      .cc-hi {{ color: #22d3ee; font-weight: 700; text-decoration: underline; }}
+      .yt-word-active {{
+        color: #fde047;
+        font-weight: 700;
+      }}
+      .btn {{
+        flex-shrink: 0;
+        display: inline-flex; align-items: center; gap: 5px;
+        background: linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.96));
+        border: 1px solid rgba(34,211,238,0.4);
+        color: #e0f2fe; border-radius: 8px; padding: 6px 11px;
+        font-size: 11.5px; font-weight: 600; cursor: pointer;
+      }}
+      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.3); }}
+      .btn.speaking {{ border-color: #10b981; color: #a7f3d0; }}
     </style>
     </head>
     <body>
-      <div class="cc-shell">
-        <div class="top">
-          <div class="cc-badge">
-            <span class="cc-pill">CC</span>
-            <span>LIVE CLOSED CAPTIONS &amp; VOICE</span>
-          </div>
-          <div class="controls">
-            <button class="btn active" id="ccToggleBtn">CC: ON</button>
-            <button class="btn" id="speakBtn">🔊 Speak Reply</button>
-          </div>
+      <div class="yt-cc-wrap">
+        <div class="yt-captions">
+          <div class="yt-you" id="ccUser"></div>
+          <div class="yt-sub" id="ccSub"></div>
         </div>
-        <div class="cc-screen" id="ccScreen">
-          <div class="cc-line cc-you" id="ccUser"></div>
-          <div class="cc-line cc-ai" id="ccAi"></div>
-        </div>
+        <button class="btn" id="speakBtn">🔊 Speak</button>
       </div>
       <script>
         const DATA = {payload_json};
-        const ccScreen = document.getElementById("ccScreen");
         const ccUser = document.getElementById("ccUser");
-        const ccAi = document.getElementById("ccAi");
-        const ccToggleBtn = document.getElementById("ccToggleBtn");
+        const ccSub = document.getElementById("ccSub");
         const speakBtn = document.getElementById("speakBtn");
         const escHtml = (s) => String(s || "").replace(/[&<>"']/g, m => ({{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}}[m]));
 
-        let ccEnabled = true;
-        const aiText = DATA.ai || "Ready. Click the microphone on the left to speak, or type a question below.";
-        const userText = DATA.user ? ("YOU: " + DATA.user) : "YOU: (Speak into the mic or ask an FAQ)";
+        const aiText = DATA.ai || "Speak into the mic or ask a question below.";
+        ccUser.textContent = DATA.user ? ("🗣️ " + DATA.user) : "";
+        if (!DATA.user) ccUser.style.display = "none";
 
-        function renderStaticCaptions(highlightIdx = -1) {{
-          if (!ccEnabled) {{
-            ccUser.textContent = "Closed captions paused";
-            ccAi.textContent = "";
+        function renderRollingCaption(charIdx = -1) {{
+          if (charIdx < 0) {{
+            ccSub.textContent = aiText.slice(0, 95) + (aiText.length > 95 ? "..." : "");
             return;
           }}
-          ccUser.textContent = userText;
-          if (highlightIdx < 0) {{
-            ccAi.textContent = "AI: " + aiText.slice(0, 125) + (aiText.length > 125 ? "..." : "");
-          }} else {{
-            const start = Math.max(0, highlightIdx - 32);
-            const snippet = aiText.slice(start, start + 115);
-            const rel = highlightIdx - start;
-            const spaceEnd = snippet.indexOf(" ", rel);
-            const wordEnd = spaceEnd === -1 ? snippet.length : spaceEnd;
-            const before = escHtml(snippet.slice(0, rel));
-            const word = escHtml(snippet.slice(rel, wordEnd));
-            const after = escHtml(snippet.slice(wordEnd));
-            ccAi.innerHTML = `AI: ${{start > 0 ? "..." : ""}}${{before}}<span class="cc-hi">${{word}}</span>${{after}}`;
-          }}
+          // YouTube-style rolling window centered around the currently spoken word
+          const winStart = Math.max(0, charIdx - 28);
+          const snippet = aiText.slice(winStart, winStart + 86);
+          const rel = charIdx - winStart;
+          const sp = snippet.indexOf(" ", rel);
+          const end = sp === -1 ? snippet.length : sp;
+          const pre = escHtml(snippet.slice(0, rel));
+          const cur = escHtml(snippet.slice(rel, end));
+          const post = escHtml(snippet.slice(end));
+          ccSub.innerHTML = `${{winStart > 0 ? "..." : ""}}${{pre}}<span class="yt-word-active">${{cur}}</span>${{post}}`;
         }}
-        renderStaticCaptions(-1);
-
-        ccToggleBtn.onclick = () => {{
-          ccEnabled = !ccEnabled;
-          ccToggleBtn.textContent = ccEnabled ? "CC: ON" : "CC: OFF";
-          ccToggleBtn.classList.toggle("active", ccEnabled);
-          renderStaticCaptions(-1);
-        }};
+        renderRollingCaption(-1);
 
         const hostWin = (() => {{
           try {{ return (window.parent && window.parent.speechSynthesis) ? window.parent : window; }}
@@ -1850,29 +1874,47 @@ def render_voice_assistant_bar(
         }})();
         const synth = hostWin.speechSynthesis || window.speechSynthesis;
 
+        let fallbackTimer = null;
         speakBtn.onclick = () => {{
           if (!synth) {{
-            ccAi.textContent = "Speech synthesis unsupported in this browser.";
+            ccSub.textContent = "Speech output unsupported in this browser.";
             return;
           }}
           if (synth.speaking) {{
             synth.cancel();
-            speakBtn.textContent = "🔊 Speak Reply";
-            renderStaticCaptions(-1);
+            if (fallbackTimer) clearInterval(fallbackTimer);
+            speakBtn.classList.remove("speaking");
+            speakBtn.textContent = "🔊 Speak";
+            renderRollingCaption(-1);
             return;
           }}
           const Utter = hostWin.SpeechSynthesisUtterance || window.SpeechSynthesisUtterance;
           const utter = new Utter(aiText);
           utter.lang = "en-IN";
           utter.rate = 1.02;
+          let gotBoundary = false;
+          let simPos = 0;
           utter.onboundary = (ev) => {{
-            if (typeof ev.charIndex === "number") renderStaticCaptions(ev.charIndex);
+            if (typeof ev.charIndex === "number") {{
+              gotBoundary = true;
+              renderRollingCaption(ev.charIndex);
+            }}
           }};
+          // Smooth rolling caption fallback if a voice engine doesn't fire onboundary
+          fallbackTimer = setInterval(() => {{
+            if (!gotBoundary && synth.speaking) {{
+              simPos = Math.min(aiText.length - 1, simPos + 5);
+              renderRollingCaption(simPos);
+            }}
+          }}, 280);
           utter.onend = () => {{
-            speakBtn.textContent = "🔊 Speak Reply";
-            renderStaticCaptions(-1);
+            if (fallbackTimer) clearInterval(fallbackTimer);
+            speakBtn.classList.remove("speaking");
+            speakBtn.textContent = "🔊 Speak";
+            renderRollingCaption(-1);
           }};
-          speakBtn.textContent = "⏹ Stop Voice";
+          speakBtn.classList.add("speaking");
+          speakBtn.textContent = "⏹ Stop";
           synth.speak(utter);
         }};
       </script>
@@ -1888,8 +1930,8 @@ def render_voice_assistant_controls(
     latest_user_text: str = "",
 ) -> Optional[str]:
     """
-    Renders a native top-level Streamlit microphone recorder (`st.audio_input`) paired with
-    Live Closed Captions ([CC]) & Read-Aloud Voice controls. Returns transcribed prompt if spoken.
+    Renders a native top-level Streamlit microphone recorder (`st.audio_input` at native mic rate)
+    paired with YouTube-style rolling closed captions. Returns transcribed prompt if spoken.
     """
     col_mic, col_cc = st.columns([1.45, 2.55])
     transcribed_prompt: Optional[str] = None
@@ -1897,8 +1939,8 @@ def render_voice_assistant_controls(
 
     with col_mic:
         audio_file = st.audio_input(
-            "🎙️ Speak Question (Click mic → talk → stop)",
-            sample_rate=16000,
+            "🎙️ Speak Question",
+            sample_rate=None,
             key=f"{key_prefix}_audio_in",
         )
         if audio_file is not None:
@@ -1920,7 +1962,7 @@ def render_voice_assistant_controls(
         render_voice_assistant_bar(
             latest_answer_text=latest_answer_text,
             latest_user_text=cc_user_display,
-            height=108,
+            height=86,
         )
     return transcribed_prompt
 

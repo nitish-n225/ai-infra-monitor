@@ -60,9 +60,21 @@ def test_ui_modules_compile_and_escape():
     assert callable(render_assistant_faq_grid)
     assert callable(render_voice_assistant_bar)
     assert callable(render_voice_assistant_controls)
-    from src.ui.components import _transcribe_wav_bytes
+    from src.ui.components import _transcribe_wav_bytes, _normalize_wav_bytes
+    import io, wave, numpy as np
     txt, err = _transcribe_wav_bytes(b"")
     assert txt is None and err is not None
+
+    # Verify quiet 16-bit PCM WAV gets amplified cleanly
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(16000)
+        wf.writeframes(np.array([100, -200, 350, -400], dtype=np.int16).tobytes())
+    norm_b, peak = _normalize_wav_bytes(buf.getvalue())
+    assert peak == 400 and len(norm_b) > 40
+    with wave.open(io.BytesIO(norm_b), "rb") as wf2:
+        boosted = np.frombuffer(wf2.readframes(4), dtype=np.int16)
+        assert int(np.max(np.abs(boosted))) > 5000
     assert callable(render_3d_gauge_pair)
     assert callable(render_3d_rca_fault_graph)
     assert callable(render_3d_topology_scene)
