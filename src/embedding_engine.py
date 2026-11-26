@@ -3,10 +3,45 @@ Semantic Log Embedding Engine.
 Converts normalized infrastructure logs into dense numerical vectors
 using the SentenceTransformer 'all-MiniLM-L6-v2' model.
 """
+import hashlib
+import os
+import re
 from typing import List, Dict, Any, Tuple, Optional, Union
 import numpy as np
 import pandas as pd
 from config import EMBEDDING_MODEL_NAME, EMBEDDING_DIMENSION
+
+
+def is_low_memory_mode() -> bool:
+    """Returns True when LOW_MEMORY_MODE is enabled for constrained cloud containers."""
+    return os.environ.get("LOW_MEMORY_MODE", "false").strip().lower() in ("1", "true", "yes")
+
+
+def lightweight_384_embed(texts: List[str]) -> np.ndarray:
+    """
+    Low-memory (~2 MB RAM) 384-dim L2-normalized word+trigram hash embeddings.
+    Compatible with FAISS IndexFlatIP(384) when PyTorch/SentenceTransformer exceeds RAM limits.
+    """
+    vecs = np.zeros((len(texts), EMBEDDING_DIMENSION), dtype=np.float32)
+    for row_idx, text in enumerate(texts):
+        clean = (text or "").lower()
+        tokens = re.findall(r"[a-z0-9_]+", clean)
+        grams = list(tokens)
+        for tok in tokens:
+            if len(tok) >= 4:
+                grams.extend(tok[i : i + 3] for i in range(len(tok) - 2))
+        if not grams:
+            grams = [clean or "empty"]
+        for gram in grams:
+            digest = hashlib.blake2b(gram.encode("utf-8"), digest_size=8).digest()
+            val = int.from_bytes(digest, "little")
+            bucket = val % EMBEDDING_DIMENSION
+            sign = 1.0 if ((val >> 16) & 1) == 0 else -1.0
+            vecs[row_idx, bucket] += sign
+        norm = float(np.linalg.norm(vecs[row_idx]))
+        if norm > 0.0:
+            vecs[row_idx] /= norm
+    return vecs
 
 class LogEmbeddingEngine:
     """
@@ -134,6 +169,9 @@ class LogEmbeddingEngine:
         if not clean_query:
             return None
 
+        if is_low_memory_mode():
+            return lightweight_384_embed([clean_query])
+
         model = cls.get_model()
         query_vec = model.encode(
             [clean_query],
@@ -141,3 +179,49 @@ class LogEmbeddingEngine:
             normalize_embeddings=True
         )
         return np.asarray(query_vec, dtype=np.float32)
+
+    @classmethod
+    def embed_logs_with_fallback(
+        cls,
+        logs_data: Union[pd.DataFrame, List[Dict[str, Any]]],
+        batch_size: int = 16,
+    ) -> Tuple[np.ndarray, List[Dict[str, Any]], str]:
+        """
+        Embeds logs using SentenceTransformer when available, falling back to
+        lightweight 384-dim hash embeddings when LOW_MEMORY_MODE=true or model loading fails.
+        Returns (embeddings, records, mode_label).
+        """
+        if isinstance(logs_data, pd.DataFrame):
+            if logs_data.empty:
+                return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32), [], "empty"
+            records = logs_data.to_dict(orient="records")
+        elif isinstance(logs_data, list):
+            records = [r for r in logs_data if isinstance(r, dict)]
+        else:
+            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32), [], "empty"
+
+        if not records:
+            return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32), [], "empty"
+
+        texts = [cls.format_log_for_embedding(r) for r in records]
+        if is_low_memory_mode():
+            return lightweight_384_embed(texts), records, "lightweight-384"
+
+        try:
+            embs, recs = cls.embed_logs(records, batch_size=batch_size)
+            return embs, recs, EMBEDDING_MODEL_NAME
+        except Exception:
+            return lightweight_384_embed(texts), records, "lightweight-384-fallback"
+
+    @classmethod
+    def embed_query_with_fallback(cls, query: str) -> Optional[np.ndarray]:
+        """Encodes a query with automatic fallback to lightweight 384-dim embeddings."""
+        clean_query = query.strip() if query else ""
+        if not clean_query:
+            return None
+        if is_low_memory_mode():
+            return lightweight_384_embed([clean_query])
+        try:
+            return cls.embed_query(clean_query)
+        except Exception:
+            return lightweight_384_embed([clean_query])

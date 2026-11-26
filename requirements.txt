@@ -1,7 +1,8 @@
 # Core Dependencies for Enterprise Autonomous AI Infrastructure Monitoring System
-streamlit>=1.32.0
+streamlit>=1.37.0
 pandas>=2.0.0
 numpy>=1.24.0
+pyyaml>=6.0
 
 # Central Backend & Real-Time Streaming
 fastapi>=0.115.0

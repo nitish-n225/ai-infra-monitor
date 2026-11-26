@@ -20,6 +20,11 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("LOW_MEMORY_MODE", "true")
+
 TMP_DIR = tempfile.TemporaryDirectory()
 os.environ["MONITOR_DB_PATH"] = str(Path(TMP_DIR.name) / "test_monitor.db")
 os.environ["MONITOR_FAISS_DIR"] = str(Path(TMP_DIR.name) / "test_faiss")

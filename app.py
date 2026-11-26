@@ -1,28 +1,33 @@
 """
 Enterprise Autonomous AI Infrastructure Monitoring System.
-Main Streamlit Application Entrypoint - Authenticated Real-Time Fleet & Offline Log Analysis.
+Main Streamlit Dashboard — Real-Time Multi-Device Fleet & Log Analysis.
 """
 import os
-import sys
-
-# Limit BLAS/OpenMP thread buffers to prevent OpenBLAS memory allocation failures on constrained Windows hosts
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 
-from config import PROJECT_TITLE, PROJECT_SUBTITLE, VERSION, EMBEDDING_MODEL_NAME, SEVERITY_COLORS
-from src.parser import InfrastructureLogParser
-from src.telemetry import TelemetryAnalyzer
-from src.rca_engine import RootCauseAnalysisEngine
-from src.predictive_failure import PredictiveFailureDetector
-from src.health_score import InfrastructureHealthScorer
-from src.vector_store import FaissVectorStore, SIMILARITY_DISCLAIMER
+# Guard BLAS/OpenMP threads before numerical/FAISS imports
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+if Path("/mount/src").exists():
+    os.environ.setdefault("LOW_MEMORY_MODE", "true")
+
+from config import PROJECT_SUBTITLE, PROJECT_TITLE, SEVERITY_COLORS, VERSION
 from src.assistant_engine import InfrastructureAIAssistant
-from src.realtime_client import BackendAPIClient, get_realtime_bridge, get_backend_url
-from src.ui.components import apply_custom_styles
+from src.health_score import InfrastructureHealthScorer
+from src.parser import InfrastructureLogParser
+from src.predictive_failure import PredictiveFailureDetector
+from src.rca_engine import RootCauseAnalysisEngine
+from src.realtime_client import (
+    BackendAPIClient,
+    get_backend_url,
+    get_realtime_bridge,
+    is_remote_backend_configured,
+)
+from src.telemetry import TelemetryAnalyzer
+from src.ui.components import apply_custom_styles, esc, render_hero_header
 from src.ui.live_views import (
     render_fleet_admin_tab,
     render_live_fleet_fragment,
@@ -32,10 +37,10 @@ from src.ui.views import (
     render_assistant_tab,
     render_overview_tab,
     render_rca_tab,
-    render_roadmap_tab,
     render_semantic_search_tab,
     render_upload_tab,
 )
+from src.vector_store import FaissVectorStore, SIMILARITY_DISCLAIMER
 
 st.set_page_config(
     page_title="AI Infrastructure Monitor",
@@ -46,28 +51,34 @@ st.set_page_config(
 
 apply_custom_styles()
 
-# Initialize Session State
+
+@st.cache_data(ttl=5, show_spinner=False)
+def _cached_backend_health(base_url: str, timeout: float = 10.0):
+    return BackendAPIClient(base_url=base_url).health(timeout=timeout)
+
+
+# Initialize session state
 if "operator_jwt" not in st.session_state:
     st.session_state["operator_jwt"] = ""
 if "operator_user" not in st.session_state:
     st.session_state["operator_user"] = ""
-
 if "raw_log_content" not in st.session_state:
     st.session_state["raw_log_content"] = ""
-    st.session_state["active_file_name"] = "None (Upload or Load Log)"
-
+    st.session_state["active_file_name"] = "None"
 if "vector_store" not in st.session_state:
     st.session_state["vector_store"] = FaissVectorStore()
-
 if "assistant_engine" not in st.session_state:
     st.session_state["assistant_engine"] = InfrastructureAIAssistant()
+if "live_assistant_history" not in st.session_state:
+    st.session_state["live_assistant_history"] = []
 
 jwt_token = st.session_state.get("operator_jwt", "")
-api_client = BackendAPIClient(bearer_token=jwt_token)
-backend_health = api_client.health()
+backend_url = get_backend_url()
+api_client = BackendAPIClient(base_url=backend_url, bearer_token=jwt_token)
+backend_health = _cached_backend_health(backend_url)
 
-if jwt_token:
-    get_realtime_bridge(token=jwt_token)
+if jwt_token and backend_health:
+    get_realtime_bridge(token=jwt_token, backend_url=backend_url)
 
 active_content = st.session_state.get("raw_log_content", "")
 active_filename = st.session_state.get("active_file_name", "None")
@@ -92,90 +103,108 @@ if st.session_state.get("last_active_file") != active_filename:
     st.session_state["assistant_chat_history"] = []
     st.session_state["last_active_file"] = active_filename
 
-# Sidebar Navigation & System Telemetry
+# Clean Sidebar
 with st.sidebar:
-    st.markdown("### 🛡️ Enterprise AI Monitor")
-    st.caption(f"{PROJECT_SUBTITLE} • `{VERSION}`")
+    st.markdown(f"### 🛡️ AI Monitor")
+    st.caption(f"{PROJECT_SUBTITLE} • `v{VERSION}`")
     st.markdown("---")
 
     data_mode = st.radio(
-        "📡 Monitoring Mode",
-        options=["Live Windows Fleet (Real-Time)", "Log File Analysis (Offline/Upload)"],
+        "Workspace",
+        options=["Live Fleet", "Log Analyzer"],
         index=0,
-        help="Switch between real-time multi-device Windows agents and static uploaded log analysis.",
     )
 
     st.markdown("---")
-    st.markdown("#### 🔌 Central Backend Status")
+    st.markdown("#### Central Backend")
     if backend_health:
-        st.success(f"🟢 Connected (`{api_client.base_url}`)")
+        st.success(f"🟢 Connected")
+        st.caption(f"`{backend_url}`")
         if jwt_token:
-            st.caption(f"Signed in as: `{st.session_state.get('operator_user', 'admin')}`")
+            st.caption(f"Operator: `{st.session_state.get('operator_user', 'admin')}`")
+            try:
+                fleet_sum = api_client.get_summary()
+                m1, m2 = st.columns(2)
+                m1.metric("Online", f"{fleet_sum['online_devices']}/{fleet_sum['total_devices']}")
+                m2.metric("Incidents", fleet_sum["open_incidents"])
+            except Exception:
+                pass
             if st.button("🚪 Sign Out", use_container_width=True):
                 st.session_state["operator_jwt"] = ""
                 st.session_state["operator_user"] = ""
                 st.rerun()
-            try:
-                fleet_sum = api_client.get_summary()
-                st.write(f"**Registered Devices**: `{fleet_sum['total_devices']}`")
-                st.write(f"**Online / Offline**: `{fleet_sum['online_devices']}` / `{fleet_sum['offline_devices']}`")
-                st.write(f"**Open Incidents**: `{fleet_sum['open_incidents']}`")
-                st.write(f"**Live FAISS Vectors**: `{fleet_sum.get('faiss_vectors', 0)}`")
-            except Exception:
-                pass
     else:
-        st.error(f"🔴 Offline (`{api_client.base_url}`)")
-        st.caption("Run `python run_backend.py` to start the central backend.")
+        st.warning("🟡 Sleeping / Offline")
+        st.caption(f"`{backend_url}`")
+        if st.button("🔄 Wake / Retry Backend", use_container_width=True):
+            _cached_backend_health.clear()
+            with st.spinner("Waking backend (up to 30s)..."):
+                woke = api_client.health(timeout=30.0)
+            if woke:
+                st.rerun()
+            else:
+                st.error("Still unreachable. Verify backend service or BACKEND_URL secret.")
 
-    st.markdown("---")
-    st.markdown("#### ⚙️ AI Engine & Environment")
-    st.caption(f"Assistant: `{assistant_engine.provider.provider_name}`")
-    st.caption(f"Embeddings: `{EMBEDDING_MODEL_NAME}` • FAISS: `CPU`")
-    st.caption(f"Python: `{sys.version.split()[0]}` • OS: `Windows`")
-
-# Top Header
-st.title(PROJECT_TITLE)
-st.markdown(
-    """
-    **Real-Time Windows Fleet Telemetry, Live AI Root Cause Analysis, FAISS Semantic Intelligence & Conversational Copilot**
-    """
+# Top Command Header
+header_status = (
+    f"Backend Online • {backend_health.get('database', 'db').upper()}"
+    if backend_health
+    else "Backend Waking / Offline"
+)
+render_hero_header(
+    PROJECT_TITLE,
+    "Real-Time Windows Fleet Telemetry, Root Cause Analysis & Semantic Log Intelligence",
+    header_status,
+    bool(backend_health),
 )
 
-if data_mode == "Live Windows Fleet (Real-Time)":
+if data_mode == "Live Fleet":
     if not backend_health:
-        st.error(
-            f"🔴 **Central Backend Offline** (`{get_backend_url()}`). "
-            "Start the backend server with `python run_backend.py`."
-        )
-    elif not jwt_token:
-        st.markdown("### 🔐 Operator Sign-In Required")
-        st.caption("Authenticate against the Central Monitoring Backend to access live client telemetry, logs, and fleet admin controls.")
-        with st.form("operator_login_form"):
-            u_in = st.text_input("Username", value="admin")
-            p_in = st.text_input("Password (or Admin API Key)", type="password")
-            login_btn = st.form_submit_button("🔓 Sign In")
-        if login_btn:
-            try:
-                auth_res = api_client.login(u_in.strip(), p_in)
-                st.session_state["operator_jwt"] = auth_res["access_token"]
-                st.session_state["operator_user"] = auth_res["username"]
-                get_realtime_bridge(token=auth_res["access_token"])
-                st.success("Authenticated successfully.")
+        if is_remote_backend_configured():
+            st.info(
+                f"Central backend (`{backend_url}`) is waking from sleep or temporarily unreachable. "
+                "Click **🔄 Wake Backend Now** below (Render free tier cold starts typically take 20–40 seconds), "
+                "or switch to **Log Analyzer** in the sidebar."
+            )
+        else:
+            st.info(
+                f"Local backend (`{backend_url}`) is not running. Start it with `python run_backend.py`, "
+                "or configure `BACKEND_URL` in Streamlit Secrets."
+            )
+        if st.button("🔄 Wake Backend Now", type="primary"):
+            _cached_backend_health.clear()
+            with st.spinner("Contacting central backend..."):
+                woke = api_client.health(timeout=35.0)
+            if woke:
                 st.rerun()
-            except Exception as e:
-                st.error(f"Authentication failed: {e}")
-        st.info(
-            "Default operator username is `admin`. Password is `MONITOR_ADMIN_PASSWORD` "
-            "(or the Admin API Key printed at backend startup / stored in `data/.admin_key`)."
-        )
+            else:
+                st.error(f"Could not reach `{backend_url}`.")
+    elif not jwt_token:
+        _, col_login, _ = st.columns([1, 1.35, 1])
+        with col_login:
+            st.markdown("### 🔐 Operator Sign-In")
+            st.caption("Authenticate to access real-time fleet telemetry, incidents, and endpoint controls.")
+            with st.form("operator_login_form"):
+                u_in = st.text_input("Username", value="admin")
+                p_in = st.text_input("Password", type="password", placeholder="MONITOR_ADMIN_PASSWORD or Admin Key")
+                login_btn = st.form_submit_button("🔓 Sign In", use_container_width=True, type="primary")
+            if login_btn:
+                with st.spinner("Signing in..."):
+                    try:
+                        auth_res = api_client.login(u_in.strip(), p_in)
+                        st.session_state["operator_jwt"] = auth_res["access_token"]
+                        st.session_state["operator_user"] = auth_res["username"]
+                        get_realtime_bridge(token=auth_res["access_token"], backend_url=backend_url)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Authentication failed: {e}")
     else:
-        tab_live, tab_incidents, tab_search, tab_assistant, tab_admin, tab_roadmap = st.tabs([
-            "📡 Live Fleet Monitor",
-            "🚨 Live Incidents & RCA",
-            "🔎 Semantic Search (Live FAISS)",
-            "🤖 AI Assistant (Live)",
-            "🔧 Fleet Enrollment & Device Admin",
-            "🗺️ Architecture & Roadmap",
+        tab_live, tab_incidents, tab_search, tab_assistant, tab_admin = st.tabs([
+            "📡 Fleet Overview",
+            "🚨 Incidents & RCA",
+            "🔎 Semantic Search",
+            "🤖 AI Assistant",
+            "⚙️ Fleet Admin",
         ])
 
         with tab_live:
@@ -185,32 +214,54 @@ if data_mode == "Live Windows Fleet (Real-Time)":
             render_live_incidents_fragment(api_client)
 
         with tab_search:
-            st.markdown("### 🔎 Live Fleet Semantic Search (Persistent FAISS)")
-            st.caption("Searches real ingested Windows & application logs vectorized with `all-MiniLM-L6-v2` across all enrolled computers.")
+            st.markdown("#### 🔎 Live Fleet Semantic Search")
+            col_p1, col_p2, col_p3, col_p4 = st.columns(4)
+            preset_q = None
+            if col_p1.button("💥 DB Connection Issues", use_container_width=True, key="live_pre_db"):
+                preset_q = "database connection pool exhausted"
+            if col_p2.button("🧠 Memory Exhaustion", use_container_width=True, key="live_pre_mem"):
+                preset_q = "out of memory virtual memory low"
+            if col_p3.button("⚠️ Service Crashes", use_container_width=True, key="live_pre_svc"):
+                preset_q = "service terminated unexpectedly"
+            if col_p4.button("🔒 Logon Failures", use_container_width=True, key="live_pre_auth"):
+                preset_q = "failed logon authentication unauthorized"
+
             col_q, col_k = st.columns([3, 1])
-            live_q = col_q.text_input("Semantic Query", placeholder="e.g. service terminated unexpectedly, disk space low, logon failure...", key="live_faiss_q")
+            default_live_q = preset_q or st.session_state.get("live_faiss_q", "")
+            live_q = col_q.text_input(
+                "Natural Language Query",
+                value=default_live_q,
+                placeholder="e.g. service terminated unexpectedly, disk space low...",
+                key="live_faiss_q_input",
+            )
             live_k = col_k.slider("Top-K", 1, 20, 5, key="live_faiss_k")
             if live_q:
+                st.session_state["live_faiss_q"] = live_q
                 try:
                     res = api_client.semantic_search(live_q, top_k=live_k)
                     if not res.get("results"):
-                        st.info("No matching historical events indexed in FAISS yet.")
+                        st.info("No matching historical events indexed yet.")
                     else:
                         for item in res["results"]:
                             sev = item.get("level", "INFO")
                             sev_color = SEVERITY_COLORS.get(sev, "#94a3b8")
                             st.markdown(
                                 f"""
-                                <div class="metric-card" style="margin-bottom:0.75rem; border-left:4px solid {sev_color};">
+                                <div class="metric-card" style="margin-bottom:0.7rem; border-left:4px solid {sev_color};">
                                     <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
-                                        <span><strong>#{item['rank']}</strong> &bull; <code>{item.get('hostname', 'host')}</code> &bull; <code>[{item['service']}]</code> &bull; <strong style="color:{sev_color};">[{sev}]</strong></span>
-                                        <span style="color:#10b981; font-weight:700;">{item['similarity_pct']}% Match</span>
+                                        <span>
+                                            <strong>#{esc(item['rank'])}</strong> &bull;
+                                            <code>{esc(item.get('hostname', 'host'))}</code> &bull;
+                                            <code>[{esc(item['service'])}]</code> &bull;
+                                            <strong style="color:{sev_color};">[{esc(sev)}]</strong>
+                                        </span>
+                                        <span style="color:#10b981; font-weight:700;">{esc(item['similarity_pct'])}% Match</span>
                                     </div>
-                                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.85rem; color:#f8fafc; margin-top:0.3rem;">
-                                        {item['message']}
+                                    <div style="font-family:'JetBrains Mono', monospace; font-size:0.84rem; color:#f1f5f9; margin-top:0.3rem;">
+                                        {esc(item['message'])}
                                     </div>
                                     <div style="font-size:0.72rem; color:#64748b; margin-top:0.2rem;">
-                                        Timestamp: {item['timestamp']} &bull; Channel: {item.get('channel', '')}
+                                        {esc(item['timestamp'])} &bull; {esc(item.get('channel', ''))}
                                     </div>
                                 </div>
                                 """,
@@ -221,10 +272,21 @@ if data_mode == "Live Windows Fleet (Real-Time)":
                     st.error(f"Semantic search failed: {e}")
 
         with tab_assistant:
-            st.markdown("### 🤖 Conversational AI Infrastructure Assistant (Live Fleet Grounded)")
-            st.caption("Queries real persisted logs, incidents, health scores, and risk trajectories from enrolled Windows machines.")
-            if "live_assistant_history" not in st.session_state:
+            col_ah1, col_ah2 = st.columns([4, 1])
+            col_ah1.markdown("#### 🤖 Fleet AI Assistant")
+            if col_ah2.button("🗑️ Clear Chat", use_container_width=True, key="clear_live_ai"):
                 st.session_state["live_assistant_history"] = []
+                st.rerun()
+
+            pq1, pq2, pq3 = st.columns(3)
+            quick_live_prompt = None
+            if pq1.button("🚨 Critical incidents?", use_container_width=True, key="live_ai_q1"):
+                quick_live_prompt = "What are the most critical incidents?"
+            if pq2.button("🩺 Fleet health & risks?", use_container_width=True, key="live_ai_q2"):
+                quick_live_prompt = "How is the fleet health score and failure risk?"
+            if pq3.button("🛠️ Recovery steps?", use_container_width=True, key="live_ai_q3"):
+                quick_live_prompt = "What recovery steps are recommended?"
+
             for msg in st.session_state["live_assistant_history"]:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
@@ -232,7 +294,9 @@ if data_mode == "Live Windows Fleet (Real-Time)":
                         with st.expander(f"📑 Evidence ({len(msg['evidence'])})", expanded=False):
                             for ev in msg["evidence"]:
                                 st.code(f"[{ev.get('timestamp')}] [{ev.get('service')}] [{ev.get('level')}] {ev.get('message')}")
-            prompt = st.chat_input("Ask about live incidents, root causes, health score, or recovery recommendations...", key="live_ai_input")
+
+            chat_in = st.chat_input("Ask about live incidents, root causes, health score, or recovery...", key="live_ai_input")
+            prompt = quick_live_prompt or chat_in
             if prompt:
                 st.session_state["live_assistant_history"].append({"role": "user", "content": prompt})
                 with st.spinner("Querying live AI engine..."):
@@ -253,19 +317,15 @@ if data_mode == "Live Windows Fleet (Real-Time)":
         with tab_admin:
             render_fleet_admin_tab(api_client)
 
-        with tab_roadmap:
-            render_roadmap_tab()
-
 else:
     if not active_content:
-        st.info("Upload a log file or load a benchmark sample in the **📥 Log Ingestion & Upload** tab to analyze static files.")
-    tab_overview, tab_rca, tab_search, tab_assistant, tab_upload, tab_roadmap = st.tabs([
-        "🖥️ Infrastructure Overview",
-        "🔍 Incidents & RCA (Stage 2)",
-        "🔎 Semantic Search (FAISS)",
-        "🤖 AI Assistant (Stage 4)",
-        "📥 Log Ingestion & Upload",
-        "🗺️ Research Roadmap",
+        st.info("Upload a log file or load a sample trace in **📥 Upload Logs** to start analyzing.")
+    tab_overview, tab_rca, tab_search, tab_assistant, tab_upload = st.tabs([
+        "📊 Overview",
+        "🔍 Incidents & RCA",
+        "🔎 Semantic Search",
+        "🤖 AI Assistant",
+        "📥 Upload Logs",
     ])
 
     with tab_overview:
@@ -282,16 +342,3 @@ else:
 
     with tab_upload:
         render_upload_tab(InfrastructureLogParser)
-
-    with tab_roadmap:
-        render_roadmap_tab()
-
-st.markdown("---")
-st.markdown(
-    """
-    <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 1rem;">
-        Enterprise Autonomous AI Infrastructure Monitoring System • Real-Time Windows Agents, FastAPI, FAISS & Streamlit
-    </div>
-    """,
-    unsafe_allow_html=True,
-)

@@ -4,13 +4,14 @@ Maintains a background WebSocket listener thread connected to the FastAPI Centra
 with JWT/Admin-Key authentication and SSE fallback.
 """
 import asyncio
+import hashlib
 import json
 import os
 import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Deque, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 import requests
@@ -121,7 +122,7 @@ class RealtimeBackendBridge:
 
     async def _ws_listen(self, token: str) -> None:
         ws_url = f"{self.base_ws_url}?token={quote(token)}"
-        async with websockets.connect(ws_url, ping_interval=20, ping_timeout=10, open_timeout=5) as ws:
+        async with websockets.connect(ws_url, ping_interval=20, ping_timeout=15, open_timeout=15) as ws:
             with self._lock:
                 self.connected = True
                 self.transport = "WEBSOCKET"
@@ -172,17 +173,27 @@ class RealtimeBackendBridge:
             }
 
 
-_BRIDGE_INSTANCE: Optional[RealtimeBackendBridge] = None
+_BRIDGE_INSTANCES: Dict[Tuple[str, str], RealtimeBackendBridge] = {}
 _BRIDGE_LOCK = threading.Lock()
 
 
-def get_realtime_bridge(token: Optional[str] = None) -> RealtimeBackendBridge:
-    global _BRIDGE_INSTANCE
+def get_realtime_bridge(token: Optional[str] = None, backend_url: Optional[str] = None) -> RealtimeBackendBridge:
+    """Returns a session-isolated WebSocket/SSE bridge keyed by (backend_url, token_digest)."""
+    resolved_url = (backend_url or get_backend_url()).rstrip("/")
+    tok = (token or "").strip()
+    tok_key = hashlib.sha256(tok.encode("utf-8")).hexdigest()[:16] if tok else "anon"
+    cache_key = (resolved_url, tok_key)
     with _BRIDGE_LOCK:
-        if _BRIDGE_INSTANCE is None:
-            _BRIDGE_INSTANCE = RealtimeBackendBridge()
-        _BRIDGE_INSTANCE.ensure_started(token=token)
-        return _BRIDGE_INSTANCE
+        bridge = _BRIDGE_INSTANCES.get(cache_key)
+        if bridge is None:
+            if len(_BRIDGE_INSTANCES) >= 32:
+                oldest_key = next(iter(_BRIDGE_INSTANCES))
+                old_bridge = _BRIDGE_INSTANCES.pop(oldest_key)
+                old_bridge._stop_event.set()
+            bridge = RealtimeBackendBridge(backend_url=resolved_url)
+            _BRIDGE_INSTANCES[cache_key] = bridge
+        bridge.ensure_started(token=tok)
+        return bridge
 
 
 class BackendAPIClient:
@@ -201,9 +212,9 @@ class BackendAPIClient:
             headers["X-Admin-Key"] = self.admin_key
         return headers
 
-    def health(self) -> Optional[Dict[str, Any]]:
+    def health(self, timeout: float = 10.0) -> Optional[Dict[str, Any]]:
         try:
-            r = requests.get(f"{self.base_url}/health", timeout=2.5)
+            r = requests.get(f"{self.base_url}/health", timeout=timeout)
             if r.status_code == 200:
                 return r.json()
         except Exception:
@@ -214,20 +225,20 @@ class BackendAPIClient:
         r = requests.post(
             f"{self.base_url}/api/v1/auth/login",
             json={"username": username, "password": password},
-            timeout=5,
+            timeout=15,
         )
         r.raise_for_status()
         return r.json()
 
     def get_summary(self, client_org: Optional[str] = None) -> Dict[str, Any]:
         params = {"client_org": client_org} if (client_org and client_org != "ALL") else {}
-        r = requests.get(f"{self.base_url}/api/v1/fleet/summary", headers=self._auth_headers(), params=params, timeout=4)
+        r = requests.get(f"{self.base_url}/api/v1/fleet/summary", headers=self._auth_headers(), params=params, timeout=10)
         r.raise_for_status()
         return r.json()
 
     def get_devices(self, client_org: Optional[str] = None) -> List[Dict[str, Any]]:
         params = {"client_org": client_org} if (client_org and client_org != "ALL") else {}
-        r = requests.get(f"{self.base_url}/api/v1/devices", headers=self._auth_headers(), params=params, timeout=4)
+        r = requests.get(f"{self.base_url}/api/v1/devices", headers=self._auth_headers(), params=params, timeout=10)
         r.raise_for_status()
         return r.json()
 
@@ -236,13 +247,13 @@ class BackendAPIClient:
             f"{self.base_url}/api/v1/devices/{device_id}/telemetry",
             headers=self._auth_headers(),
             params={"limit": limit},
-            timeout=4,
+            timeout=10,
         )
         r.raise_for_status()
         return r.json()
 
     def get_device_forecast(self, device_id: str) -> Dict[str, Any]:
-        r = requests.get(f"{self.base_url}/api/v1/devices/{device_id}/forecast", headers=self._auth_headers(), timeout=4)
+        r = requests.get(f"{self.base_url}/api/v1/devices/{device_id}/forecast", headers=self._auth_headers(), timeout=10)
         r.raise_for_status()
         return r.json()
 

@@ -22,6 +22,7 @@ class FaissVectorStore:
     def __init__(self, dimension: int = EMBEDDING_DIMENSION):
         self.dimension = dimension
         self.index = None
+        self._numpy_vectors: Optional[np.ndarray] = None
         self.metadata_records: List[Dict[str, Any]] = []
 
     def build_index(
@@ -30,7 +31,7 @@ class FaissVectorStore:
         records: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
-        Builds a new FAISS CPU IndexFlatIP index from normalized embeddings.
+        Builds a new FAISS CPU IndexFlatIP index (with NumPy fallback if FAISS is unavailable).
 
         Parameters:
             embeddings: Float32 numpy array of shape (N, dimension).
@@ -39,8 +40,6 @@ class FaissVectorStore:
         Returns:
             Status summary dictionary.
         """
-        import faiss
-
         # Reset previous index
         self.reset()
 
@@ -63,19 +62,25 @@ class FaissVectorStore:
                 f"Record count mismatch: {embeddings.shape[0]} embeddings vs {len(records)} metadata records"
             )
 
-        # Ensure float32 dtype for FAISS
+        # Ensure float32 dtype for FAISS / NumPy
         vectors = np.ascontiguousarray(embeddings, dtype=np.float32)
-
-        # Create Flat Inner Product index (equivalent to Cosine Similarity for unit vectors)
-        self.index = faiss.IndexFlatIP(self.dimension)
-        self.index.add(vectors)
+        self._numpy_vectors = vectors
         self.metadata_records = list(records)
+
+        try:
+            import faiss
+            self.index = faiss.IndexFlatIP(self.dimension)
+            self.index.add(vectors)
+            indexed_count = self.index.ntotal
+        except Exception:
+            self.index = None
+            indexed_count = len(self.metadata_records)
 
         return {
             "status": "INDEX_BUILT",
-            "indexed_count": self.index.ntotal,
+            "indexed_count": indexed_count,
             "dimension": self.dimension,
-            "message": f"Successfully indexed {self.index.ntotal} log vectors into FAISS."
+            "message": f"Successfully indexed {indexed_count} log vectors."
         }
 
     def search(
@@ -106,18 +111,24 @@ class FaissVectorStore:
                 "message": "Please enter a non-empty search query."
             }
 
-        if self.index is None or self.index.ntotal == 0:
+        total_vectors = self.index.ntotal if self.index is not None else (
+            int(self._numpy_vectors.shape[0]) if self._numpy_vectors is not None else 0
+        )
+        if total_vectors == 0 or not self.metadata_records:
             return {
                 "query": clean_query,
                 "status": "INDEX_EMPTY",
                 "total_matches": 0,
                 "results": [],
                 "disclaimer": SIMILARITY_DISCLAIMER,
-                "message": "The FAISS vector index is empty. Please load or upload logs first."
+                "message": "The vector index is empty. Please load or upload logs first."
             }
 
-        # Convert query to normalized sentence vector
-        query_vec = LogEmbeddingEngine.embed_query(clean_query)
+        # Convert query to normalized vector (falls back safely if SentenceTransformer fails)
+        try:
+            query_vec = LogEmbeddingEngine.embed_query(clean_query)
+        except Exception:
+            query_vec = LogEmbeddingEngine.embed_query_with_fallback(clean_query)
         if query_vec is None:
             return {
                 "query": clean_query,
@@ -129,13 +140,21 @@ class FaissVectorStore:
             }
 
         # Clamp top_k within valid index bounds
-        effective_k = min(max(1, top_k), self.index.ntotal)
+        effective_k = min(max(1, top_k), total_vectors)
 
-        # Query FAISS index
-        distances, indices = self.index.search(query_vec, effective_k)
+        # Query FAISS index (or NumPy fallback)
+        if self.index is not None:
+            distances, indices = self.index.search(query_vec, effective_k)
+            top_indices = indices[0]
+            top_distances = distances[0]
+        else:
+            scores = (self._numpy_vectors @ query_vec.T).ravel()
+            order = np.argsort(-scores)[:effective_k]
+            top_indices = order
+            top_distances = scores[order]
 
         results = []
-        for rank, (idx, dist) in enumerate(zip(indices[0], distances[0]), start=1):
+        for rank, (idx, dist) in enumerate(zip(top_indices, top_distances), start=1):
             if idx == -1 or idx >= len(self.metadata_records):
                 continue
 
@@ -171,11 +190,17 @@ class FaissVectorStore:
     def reset(self):
         """Clears the FAISS index and associated metadata mapping."""
         self.index = None
+        self._numpy_vectors = None
         self.metadata_records = []
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns diagnostic statistics about the vector store."""
-        total = self.index.ntotal if self.index is not None else 0
+        if self.index is not None:
+            total = self.index.ntotal
+        elif self._numpy_vectors is not None:
+            total = int(self._numpy_vectors.shape[0])
+        else:
+            total = 0
         return {
             "is_indexed": total > 0,
             "total_vectors": total,

@@ -9,7 +9,6 @@ Connects real incoming Windows logs & system telemetry to existing Stage 1-4 mod
 - LogEmbeddingEngine & FaissVectorStore (src/embedding_engine.py, src/vector_store.py)
 - InfrastructureAIAssistant (src/assistant_engine.py)
 """
-import hashlib
 import json
 import logging
 import os
@@ -18,7 +17,15 @@ import threading
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
-import faiss
+# Guard OpenBLAS / OpenMP thread pool before importing faiss to avoid Windows DLL init crashes
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
+try:
+    import faiss
+except Exception:
+    faiss = None
 import numpy as np
 import pandas as pd
 
@@ -29,7 +36,7 @@ from src.rca_engine import RootCauseAnalysisEngine, INCIDENT_PATTERNS
 from src.predictive_failure import PredictiveFailureDetector
 from src.health_score import InfrastructureHealthScorer
 from src.self_healing import SelfHealingEngine
-from src.embedding_engine import LogEmbeddingEngine
+from src.embedding_engine import LogEmbeddingEngine, is_low_memory_mode, lightweight_384_embed
 from src.vector_store import FaissVectorStore, SIMILARITY_DISCLAIMER
 from src.assistant_engine import InfrastructureAIAssistant
 
@@ -171,35 +178,9 @@ def compute_hardware_trend_forecast(telemetry_history: List[Dict[str, Any]]) -> 
     }
 
 
-def _lightweight_384_embed(texts: List[str]) -> np.ndarray:
-    """
-    Low-memory (~2 MB RAM) 384-dim L2-normalized word+trigram hash embeddings for 512 MB cloud containers.
-    Compatible with FAISS IndexFlatIP(384) when PyTorch/SentenceTransformer exceeds container RAM limits.
-    """
-    vecs = np.zeros((len(texts), EMBEDDING_DIMENSION), dtype=np.float32)
-    for row_idx, text in enumerate(texts):
-        clean = (text or "").lower()
-        tokens = re.findall(r"[a-z0-9_]+", clean)
-        grams = list(tokens)
-        for t in tokens:
-            if len(t) >= 4:
-                grams.extend(t[i : i + 3] for i in range(len(t) - 2))
-        if not grams:
-            grams = [clean or "empty"]
-        for g in grams:
-            digest = hashlib.blake2b(g.encode("utf-8"), digest_size=8).digest()
-            val = int.from_bytes(digest, "little")
-            bucket = val % EMBEDDING_DIMENSION
-            sign = 1.0 if ((val >> 16) & 1) == 0 else -1.0
-            vecs[row_idx, bucket] += sign
-        norm = float(np.linalg.norm(vecs[row_idx]))
-        if norm > 0.0:
-            vecs[row_idx] /= norm
-    return vecs
-
-
-def _is_low_memory_mode() -> bool:
-    return os.environ.get("LOW_MEMORY_MODE", "false").strip().lower() in ("1", "true", "yes")
+# Shared low-memory embedding helpers imported from src.embedding_engine
+_lightweight_384_embed = lightweight_384_embed
+_is_low_memory_mode = is_low_memory_mode
 
 
 def _encode_texts(texts: List[str]) -> np.ndarray:
@@ -222,31 +203,50 @@ class PersistentLiveVectorStore:
         env_dir = os.environ.get("MONITOR_FAISS_DIR", "").strip()
         self.index_dir = Path(env_dir) if env_dir else (index_dir or (BASE_DIR / "data" / "faiss_live"))
         self.index_path = self.index_dir / "live.index"
+        self.numpy_path = self.index_dir / "live_vectors.npy"
         self.meta_path = self.index_dir / "live_meta.json"
         self._lock = threading.Lock()
-        self.index = faiss.IndexFlatIP(EMBEDDING_DIMENSION)
+        self.index = faiss.IndexFlatIP(EMBEDDING_DIMENSION) if faiss is not None else None
+        self._numpy_vectors: Optional[np.ndarray] = None
         self.metadata: List[Dict[str, Any]] = []
         self._known_uids: set = set()
         self.load()
 
+    def _total_vectors(self) -> int:
+        if self.index is not None:
+            return int(self.index.ntotal)
+        if self._numpy_vectors is not None:
+            return int(self._numpy_vectors.shape[0])
+        return 0
+
     def load(self) -> None:
         with self._lock:
             self.index_dir.mkdir(parents=True, exist_ok=True)
-            if self.index_path.exists() and self.meta_path.exists():
+            if self.meta_path.exists():
                 try:
-                    self.index = faiss.read_index(str(self.index_path))
-                    self.metadata = json.loads(self.meta_path.read_text(encoding="utf-8"))
-                    self._known_uids = {m.get("event_uid") for m in self.metadata if m.get("event_uid")}
-                    return
+                    if faiss is not None and self.index_path.exists():
+                        self.index = faiss.read_index(str(self.index_path))
+                        self.metadata = json.loads(self.meta_path.read_text(encoding="utf-8"))
+                        self._known_uids = {m.get("event_uid") for m in self.metadata if m.get("event_uid")}
+                        return
+                    if self.numpy_path.exists():
+                        self._numpy_vectors = np.load(str(self.numpy_path))
+                        self.metadata = json.loads(self.meta_path.read_text(encoding="utf-8"))
+                        self._known_uids = {m.get("event_uid") for m in self.metadata if m.get("event_uid")}
+                        return
                 except Exception:
                     pass
-            self.index = faiss.IndexFlatIP(EMBEDDING_DIMENSION)
+            self.index = faiss.IndexFlatIP(EMBEDDING_DIMENSION) if faiss is not None else None
+            self._numpy_vectors = None
             self.metadata = []
             self._known_uids = set()
 
     def save(self) -> None:
         self.index_dir.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(self.index, str(self.index_path))
+        if faiss is not None and self.index is not None:
+            faiss.write_index(self.index, str(self.index_path))
+        elif self._numpy_vectors is not None:
+            np.save(str(self.numpy_path), self._numpy_vectors)
         self.meta_path.write_text(json.dumps(self.metadata, default=str), encoding="utf-8")
 
     def rebuild_from_db_if_empty(self, limit: int = 5000) -> int:
@@ -255,7 +255,7 @@ class PersistentLiveVectorStore:
         rebuilds the FAISS index from events persisted in PostgreSQL/SQLite.
         """
         with self._lock:
-            if self.index.ntotal > 0:
+            if self._total_vectors() > 0:
                 return 0
         persisted = get_events(limit=limit)
         if not persisted:
@@ -292,7 +292,10 @@ class PersistentLiveVectorStore:
             if embeddings.size == 0:
                 return 0
             vectors = np.ascontiguousarray(embeddings, dtype=np.float32)
-            self.index.add(vectors)
+            if self.index is not None:
+                self.index.add(vectors)
+            else:
+                self._numpy_vectors = vectors if self._numpy_vectors is None else np.vstack([self._numpy_vectors, vectors])
             for rec in meta_records:
                 uid = rec.get("event_uid")
                 if uid:
@@ -326,7 +329,8 @@ class PersistentLiveVectorStore:
             return {"query": "", "status": "EMPTY_QUERY", "total_matches": 0, "results": [], "disclaimer": SIMILARITY_DISCLAIMER}
 
         with self._lock:
-            if self.index.ntotal == 0 or not self.metadata:
+            total_vectors = self._total_vectors()
+            if total_vectors == 0 or not self.metadata:
                 return {"query": clean, "status": "INDEX_EMPTY", "total_matches": 0, "results": [], "disclaimer": SIMILARITY_DISCLAIMER}
             try:
                 if _is_low_memory_mode():
@@ -341,10 +345,19 @@ class PersistentLiveVectorStore:
             if q_vec is None:
                 return {"query": clean, "status": "QUERY_EMBEDDING_FAILED", "total_matches": 0, "results": [], "disclaimer": SIMILARITY_DISCLAIMER}
 
-            search_k = min(max(top_k * 4, 15), self.index.ntotal)
-            distances, indices = self.index.search(q_vec, search_k)
+            search_k = min(max(top_k * 4, 15), total_vectors)
+            if self.index is not None:
+                distances, indices = self.index.search(q_vec, search_k)
+                top_indices = indices[0]
+                top_distances = distances[0]
+            else:
+                scores = (self._numpy_vectors @ q_vec.T).ravel()
+                order = np.argsort(-scores)[:search_k]
+                top_indices = order
+                top_distances = scores[order]
+
             results = []
-            for idx, dist in zip(indices[0], distances[0]):
+            for idx, dist in zip(top_indices, top_distances):
                 idx_int = int(idx)
                 if idx_int == -1 or idx_int >= len(self.metadata):
                     continue
@@ -385,19 +398,23 @@ class PersistentLiveVectorStore:
 
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
+            total = self._total_vectors()
             return {
-                "is_indexed": self.index.ntotal > 0,
-                "total_vectors": self.index.ntotal,
+                "is_indexed": total > 0,
+                "total_vectors": total,
                 "dimension": EMBEDDING_DIMENSION,
             }
 
     def reset(self) -> None:
         with self._lock:
-            self.index = faiss.IndexFlatIP(EMBEDDING_DIMENSION)
+            self.index = faiss.IndexFlatIP(EMBEDDING_DIMENSION) if faiss is not None else None
+            self._numpy_vectors = None
             self.metadata = []
             self._known_uids = set()
             if self.index_path.exists():
                 self.index_path.unlink(missing_ok=True)
+            if self.numpy_path.exists():
+                self.numpy_path.unlink(missing_ok=True)
             if self.meta_path.exists():
                 self.meta_path.unlink(missing_ok=True)
 

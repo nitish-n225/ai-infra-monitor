@@ -57,7 +57,9 @@ def test_faiss_rebuild_after_ephemeral_disk_wipe():
         tmp_path = Path(tmp)
         old_db = os.environ.get("MONITOR_DB_PATH")
         old_pg = os.environ.pop("DATABASE_URL", None)
+        old_lm = os.environ.get("LOW_MEMORY_MODE")
         os.environ["MONITOR_DB_PATH"] = str(tmp_path / "rebuild_test.db")
+        os.environ["LOW_MEMORY_MODE"] = "true"
         try:
             from backend.database import init_monitoring_db, upsert_device_registration, insert_events_deduplicated
             from backend.ai_pipeline import PersistentLiveVectorStore
@@ -103,6 +105,10 @@ def test_faiss_rebuild_after_ephemeral_disk_wipe():
                 os.environ["MONITOR_DB_PATH"] = old_db
             if old_pg is not None:
                 os.environ["DATABASE_URL"] = old_pg
+            if old_lm is None:
+                os.environ.pop("LOW_MEMORY_MODE", None)
+            else:
+                os.environ["LOW_MEMORY_MODE"] = old_lm
     print("[PASS] FAISS index rebuild from persisted database verified.")
 
 
