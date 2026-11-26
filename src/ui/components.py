@@ -45,20 +45,75 @@ def apply_custom_styles() -> None:
         footer { visibility: hidden; }
         [data-testid="stDecoration"] { display: none; }
         .stDeployButton { display: none; }
+        [data-testid="stHeader"] {
+            background: transparent !important;
+        }
 
-        /* 3D Perspective Cyber-Grid Backdrop */
+        @keyframes cyberGridFlow {
+            0%   { background-position: 0 0, 0 0; }
+            100% { background-position: 0 60px, 0 60px; }
+        }
+
+        @keyframes auroraDrift {
+            0%   { transform: translate3d(-2%, -1%, 0) scale(1); }
+            50%  { transform: translate3d(2%, 2%, 0) scale(1.06); }
+            100% { transform: translate3d(-2%, -1%, 0) scale(1); }
+        }
+
+        /* 3D Spatial Deep-Space Backdrop */
         .stApp {
-            background-color: var(--bg-root);
+            position: relative;
+            background-color: #030612;
             background-image:
-                radial-gradient(ellipse 70% 45% at 15% 0%, rgba(34, 211, 238, 0.14), transparent 60%),
-                radial-gradient(ellipse 55% 40% at 88% 5%, rgba(129, 140, 248, 0.13), transparent 58%),
-                radial-gradient(ellipse 50% 45% at 50% 100%, rgba(16, 185, 129, 0.08), transparent 65%),
-                linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+                radial-gradient(ellipse 80% 50% at 15% -5%, rgba(34, 211, 238, 0.20), transparent 62%),
+                radial-gradient(ellipse 65% 48% at 88% 4%, rgba(139, 92, 246, 0.19), transparent 60%),
+                radial-gradient(ellipse 70% 45% at 50% 105%, rgba(16, 185, 129, 0.12), transparent 65%);
+            overflow-x: hidden;
+        }
+
+        /* 3D Vanishing-Point Perspective Floor Grid */
+        [data-testid="stAppViewContainer"] {
+            position: relative;
+            overflow-x: hidden;
+        }
+        [data-testid="stAppViewContainer"]::before {
+            content: "";
+            position: fixed;
+            left: -25%;
+            right: -25%;
+            bottom: -18%;
+            height: 72vh;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                linear-gradient(to right, rgba(34, 211, 238, 0.18) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(129, 140, 248, 0.18) 1px, transparent 1px);
+            background-size: 60px 60px;
+            transform-origin: 50% 100%;
+            transform: perspective(560px) rotateX(68deg);
+            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 48%, transparent 82%);
+            mask-image: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 48%, transparent 82%);
+            animation: cyberGridFlow 7s linear infinite;
+        }
+
+        /* 3D Volumetric Floating Aurora Halos */
+        [data-testid="stAppViewContainer"]::after {
+            content: "";
+            position: fixed;
+            inset: -10%;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(circle at 22% 24%, rgba(34, 211, 238, 0.14) 0%, transparent 32%),
+                radial-gradient(circle at 78% 28%, rgba(168, 85, 247, 0.14) 0%, transparent 34%),
+                radial-gradient(circle at 52% 76%, rgba(16, 185, 129, 0.10) 0%, transparent 36%);
+            filter: blur(28px);
+            animation: auroraDrift 16s ease-in-out infinite;
         }
 
         .block-container {
+            position: relative;
+            z-index: 1;
             padding-top: 1.4rem;
             padding-bottom: 2.5rem;
             max-width: 1440px;
@@ -66,21 +121,25 @@ def apply_custom_styles() -> None:
         }
 
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(10, 16, 32, 0.96) 0%, rgba(5, 8, 20, 0.98) 100%);
-            border-right: 1px solid rgba(34, 211, 238, 0.14);
-            box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+            background: linear-gradient(180deg, rgba(8, 13, 28, 0.86) 0%, rgba(4, 7, 18, 0.94) 100%);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-right: 1px solid rgba(34, 211, 238, 0.22);
+            box-shadow: 12px 0 38px rgba(0, 0, 0, 0.55);
         }
 
         /* 3D Glassmorphic Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 0.5rem;
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(9, 14, 28, 0.9));
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.68), rgba(8, 13, 28, 0.82));
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             padding: 0.42rem;
             border-radius: 14px;
-            border: 1px solid var(--border-subtle);
+            border: 1px solid rgba(148, 163, 184, 0.2);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                0 10px 28px -8px rgba(0, 0, 0, 0.55);
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 12px 30px -8px rgba(0, 0, 0, 0.6);
         }
         .stTabs [data-baseweb="tab"] {
             border-radius: 10px;
@@ -141,15 +200,17 @@ def apply_custom_styles() -> None:
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            background: linear-gradient(135deg, rgba(17, 24, 39, 0.92), rgba(9, 14, 28, 0.96));
-            border: 1px solid rgba(34, 211, 238, 0.25);
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(7, 11, 24, 0.88));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(34, 211, 238, 0.32);
             border-radius: 16px;
             padding: 1.15rem 1.45rem;
             margin-bottom: 1.15rem;
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.14),
-                0 20px 44px -14px rgba(0, 0, 0, 0.65),
-                0 0 36px -12px rgba(34, 211, 238, 0.22);
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                0 22px 48px -14px rgba(0, 0, 0, 0.72),
+                0 0 42px -12px rgba(34, 211, 238, 0.28);
             transform-style: preserve-3d;
         }
         .hero-title {
@@ -169,14 +230,16 @@ def apply_custom_styles() -> None:
 
         /* 3D Glassmorphic Metric & Host Cards */
         .metric-card {
-            background: linear-gradient(155deg, rgba(22, 32, 54, 0.82), rgba(8, 13, 26, 0.94));
-            border: 1px solid var(--border-subtle);
+            background: linear-gradient(155deg, rgba(20, 30, 54, 0.68), rgba(7, 11, 24, 0.86));
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 14px;
             padding: 1rem 1.15rem;
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.12),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.35),
-                0 16px 34px -12px rgba(0, 0, 0, 0.65);
+                inset 0 1px 0 rgba(255, 255, 255, 0.16),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+                0 18px 38px -12px rgba(0, 0, 0, 0.72);
             transform-style: preserve-3d;
             transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.22s ease, box-shadow 0.22s ease;
         }
