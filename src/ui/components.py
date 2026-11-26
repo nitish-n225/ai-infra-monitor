@@ -614,7 +614,7 @@ def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: 
     )
 
 
-def render_luxury_login_showcase(height: int = 470) -> None:
+def render_luxury_login_showcase(height: int = 395) -> None:
     """
     Renders a self-contained 60fps interactive 3D Orbital Security Core showcase
     for the executive split-screen login portal.
@@ -752,19 +752,11 @@ def render_luxury_login_showcase(height: int = 470) -> None:
     <body>
       <div class="stage">
         <canvas id="globeCanvas"></canvas>
-        <div class="top-bar">
-          <div class="badge"><span class="dot"></span> AUTONOMOUS TELEMETRY FABRIC</div>
-          <div class="drag-hint">Drag 3D Core</div>
+        <div class="top-bar" style="justify-content:flex-end;">
+          <div class="drag-hint">Drag 3D</div>
         </div>
-        <div class="bottom-panel">
-          <div class="bp-title">AI Infrastructure Command &amp; Intelligence</div>
-          <div class="bp-sub">Real-time host surveillance, semantic FAISS indexing &amp; root cause graph engine.</div>
-          <div class="chips">
-            <span class="chip">⚡ Sub-Second Telemetry</span>
-            <span class="chip">🧠 384-D Vector Search</span>
-            <span class="chip">🛡️ Fault-Tree RCA</span>
-            <span class="chip">🔒 Zero-Trust JWT</span>
-          </div>
+        <div class="bottom-panel" style="text-align:center; padding:10px 14px;">
+          <div class="bp-title" style="margin-bottom:0;">AI Infrastructure Monitor</div>
         </div>
       </div>
       <script>
@@ -1046,13 +1038,7 @@ def render_luxury_login_header() -> None:
         </style>
         <div class="login-luxe-banner">
             <div class="login-crest">🛡️</div>
-            <div class="login-title">Operator Access Portal</div>
-            <div class="login-sub">Sign in to access fleet telemetry, incident diagnostics, and endpoint controls.</div>
-            <div class="login-pills">
-                <span class="login-pill">🔐 Zero-Trust JWT</span>
-                <span class="login-pill">📡 Live Telemetry</span>
-                <span class="login-pill">🧠 Neural RCA</span>
-            </div>
+            <div class="login-title" style="margin-bottom:0;">Operator Sign-In</div>
         </div>
         """,
         unsafe_allow_html=True,

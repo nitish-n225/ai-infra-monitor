@@ -204,17 +204,13 @@ if data_mode == "Live Fleet":
         st.markdown("<div style='height:0.65rem;'></div>", unsafe_allow_html=True)
         col_pad_l, col_showcase, col_portal, col_pad_r = st.columns([0.12, 1.18, 1.0, 0.12], gap="large")
         with col_showcase:
-            render_luxury_login_showcase(height=475)
+            render_luxury_login_showcase(height=395)
         with col_portal:
             render_luxury_login_header()
             with st.form("operator_login_form"):
                 u_in = st.text_input("Username", value="admin")
                 p_in = st.text_input("Password", type="password", placeholder="MONITOR_ADMIN_PASSWORD or Admin Key")
                 login_btn = st.form_submit_button("🔓 Sign In", use_container_width=True, type="primary")
-            st.markdown(
-                "<div class='login-footer-note'>Protected by Zero-Trust JWT Authentication • Role-Scoped Fleet Access</div>",
-                unsafe_allow_html=True,
-            )
             if login_btn:
                 with st.spinner("Signing in..."):
                     try:
