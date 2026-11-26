@@ -27,7 +27,12 @@ from src.realtime_client import (
     is_remote_backend_configured,
 )
 from src.telemetry import TelemetryAnalyzer
-from src.ui.components import apply_custom_styles, esc, render_hero_header
+from src.ui.components import (
+    apply_custom_styles,
+    esc,
+    render_3d_vector_constellation,
+    render_hero_header,
+)
 from src.ui.live_views import (
     render_fleet_admin_tab,
     render_live_fleet_fragment,
@@ -242,6 +247,7 @@ if data_mode == "Live Fleet":
                     if not res.get("results"):
                         st.info("No matching historical events indexed yet.")
                     else:
+                        render_3d_vector_constellation(live_q, res["results"])
                         for item in res["results"]:
                             sev = item.get("level", "INFO")
                             sev_color = SEVERITY_COLORS.get(sev, "#94a3b8")

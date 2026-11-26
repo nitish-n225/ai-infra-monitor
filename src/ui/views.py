@@ -8,7 +8,13 @@ import streamlit as st
 from config import SEVERITY_COLORS
 from src.sample_data import load_sample_log
 from src.self_healing import SAFETY_POLICY_DISCLAIMER, SelfHealingEngine
-from src.ui.components import esc, render_metric_card
+from src.ui.components import (
+    esc,
+    render_3d_gauge_pair,
+    render_3d_topology_scene,
+    render_3d_vector_constellation,
+    render_metric_card,
+)
 
 
 def render_overview_tab(
@@ -46,9 +52,33 @@ def render_overview_tab(
     with col4:
         render_metric_card("Services", f"{services_count}", "Active components", "#22d3ee", accent="#22d3ee")
 
+    if not df.empty:
+        st.markdown("")
+        render_3d_gauge_pair(health_score, health_cond, risk_score, risk_level)
+
     st.markdown("---")
-    st.markdown("#### 🌐 Service Components")
+    st.markdown("#### 🌐 3D Infrastructure Service Topology")
     if not df.empty and telemetry.get("service_counts"):
+        svc_3d_nodes = []
+        for svc_name, count in telemetry["service_counts"].items():
+            svc_crit = df[(df["service"] == svc_name) & (df["level"].isin(["CRITICAL", "FATAL"]))].shape[0]
+            svc_err = df[(df["service"] == svc_name) & (df["level"] == "ERROR")].shape[0]
+            svc_warn = df[(df["service"] == svc_name) & (df["level"].isin(["WARN", "WARNING"]))].shape[0]
+            state = "critical" if svc_crit > 0 else ("warning" if (svc_err > 0 or svc_warn > 0) else "healthy")
+            svc_3d_nodes.append({
+                "label": svc_name,
+                "state": state,
+                "size": min(22, 11 + int(count)),
+                "detail": f"Events: {int(count)}<br>Critical: {int(svc_crit)} | Errors: {int(svc_err)} | Warns: {int(svc_warn)}",
+            })
+        render_3d_topology_scene(
+            nodes=svc_3d_nodes,
+            center_label="Cluster Core",
+            center_sub="RCA Fault Graph",
+            title="Interactive 3D Service Dependency & Fault Topology",
+            height=350,
+        )
+
         service_cols = st.columns(min(len(telemetry["services"]), 4) or 1)
         for idx, (svc_name, count) in enumerate(telemetry["service_counts"].items()):
             with service_cols[idx % len(service_cols)]:
@@ -283,6 +313,8 @@ def render_semantic_search_tab(vector_store, df: pd.DataFrame):
         st.session_state["last_semantic_query"] = user_query
         search_res = vector_store.search(user_query, top_k=top_k)
         st.caption(f"Matched **{search_res['total_matches']}** log events for `'{user_query}'`.")
+        if search_res["results"]:
+            render_3d_vector_constellation(user_query, search_res["results"])
         for item in search_res["results"]:
             sev = item.get("level", "INFO")
             sev_color = SEVERITY_COLORS.get(sev, "#94a3b8")
@@ -328,13 +360,16 @@ def render_upload_tab(parser_cls):
 
     uploaded_file = st.file_uploader("Upload Log File (.log, .txt, .csv, .json)", type=["log", "txt", "csv", "json"])
     if uploaded_file is not None:
-        try:
-            content = uploaded_file.read().decode("utf-8", errors="replace")
-            st.session_state["raw_log_content"] = content
-            st.session_state["active_file_name"] = uploaded_file.name
-            st.success(f"Loaded `{uploaded_file.name}` ({len(content.splitlines())} lines).")
-        except Exception as e:
-            st.error(f"Error reading file: {e}")
+        upload_sig = f"{uploaded_file.name}:{uploaded_file.size}"
+        if st.session_state.get("last_uploaded_sig") != upload_sig:
+            try:
+                content = uploaded_file.read().decode("utf-8", errors="replace")
+                st.session_state["last_uploaded_sig"] = upload_sig
+                st.session_state["raw_log_content"] = content
+                st.session_state["active_file_name"] = uploaded_file.name
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error reading file: {e}")
 
     active_content = st.session_state.get("raw_log_content", "")
     active_filename = st.session_state.get("active_file_name", "None")

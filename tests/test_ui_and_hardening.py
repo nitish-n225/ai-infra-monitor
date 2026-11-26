@@ -20,7 +20,15 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 
 def test_ui_modules_compile_and_escape():
-    from src.ui.components import esc, resource_bar_html, render_metric_card, render_hero_header
+    from src.ui.components import (
+        esc,
+        resource_bar_html,
+        render_metric_card,
+        render_hero_header,
+        render_3d_gauge_pair,
+        render_3d_topology_scene,
+        render_3d_vector_constellation,
+    )
     import src.ui.views as views
     import src.ui.live_views as live_views
 
@@ -43,6 +51,9 @@ def test_ui_modules_compile_and_escape():
     assert "College Mini-Project" not in views_src
     assert callable(render_metric_card)
     assert callable(render_hero_header)
+    assert callable(render_3d_gauge_pair)
+    assert callable(render_3d_topology_scene)
+    assert callable(render_3d_vector_constellation)
     assert hasattr(views, "render_overview_tab")
     assert hasattr(live_views, "render_live_fleet_fragment")
 
@@ -106,6 +117,28 @@ def test_realtime_bridge_session_isolation():
     print("[PASS] Per-session RealtimeBackendBridge isolation verified.")
 
 
+def test_csv_and_json_array_upload_parsing():
+    from src.parser import InfrastructureLogParser
+
+    csv_text = (
+        "Timestamp,Host,Channel,Level,Service,EventID,RCA,Message\n"
+        "2026-11-26T09:00:00Z,WIN-01,System,CRITICAL,db-postgres,7031,DATABASE_FAILURE,Connection slots exhausted\n"
+        "2026-11-26T09:00:05Z,WIN-01,Application,WARNING,cache-redis,1000,MEMORY_LEAK_OOM,Memory near maxmemory\n"
+    )
+    df_csv = InfrastructureLogParser.parse_text(csv_text)
+    assert len(df_csv) == 2
+    assert df_csv.iloc[0]["level"] == "CRITICAL"
+    assert df_csv.iloc[0]["service"] == "db-postgres"
+    assert df_csv.iloc[1]["level"] == "WARN"
+
+    json_arr = '[{"timestamp": "2026-11-26T09:00:00Z", "level": "ERROR", "service": "auth", "message": "Token expired"}]'
+    df_json = InfrastructureLogParser.parse_text(json_arr)
+    assert len(df_json) == 1
+    assert df_json.iloc[0]["service"] == "auth"
+    assert df_json.iloc[0]["message"] == "Token expired"
+    print("[PASS] CSV and JSON-array log upload parsing verified.")
+
+
 if __name__ == "__main__":
     print("=" * 65)
     print("Running UI Integrity & Enterprise Hardening Tests")
@@ -113,6 +146,7 @@ if __name__ == "__main__":
     test_ui_modules_compile_and_escape()
     test_lightweight_embedding_and_numpy_fallback()
     test_realtime_bridge_session_isolation()
+    test_csv_and_json_array_upload_parsing()
     print("=" * 65)
     print("[SUCCESS] All UI & enterprise hardening checks passed!")
     print("=" * 65)

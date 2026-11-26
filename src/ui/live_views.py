@@ -6,7 +6,13 @@ import pandas as pd
 import streamlit as st
 
 from src.realtime_client import BackendAPIClient, get_realtime_bridge
-from src.ui.components import esc, render_metric_card, resource_bar_html
+from src.ui.components import (
+    esc,
+    render_3d_gauge_pair,
+    render_3d_topology_scene,
+    render_metric_card,
+    resource_bar_html,
+)
 
 
 def _status_badge(status: str) -> str:
@@ -113,6 +119,40 @@ def render_live_fleet_fragment(api_client: BackendAPIClient):
             "No Windows agents enrolled yet. Open **⚙️ Fleet Admin → 🔑 Enroll Device** to generate a setup command."
         )
         return
+
+    render_3d_gauge_pair(
+        summary["fleet_health_score"],
+        "Healthy" if summary["fleet_health_score"] >= 80 else ("Degraded" if summary["fleet_health_score"] >= 50 else "Critical"),
+        summary["fleet_risk_score"],
+        "High Risk" if summary["fleet_risk_score"] >= 55 else ("Moderate" if summary["fleet_risk_score"] >= 30 else "Low Risk"),
+    )
+
+    fleet_3d_nodes = []
+    for d in devices:
+        tel = d.get("latest_telemetry") or {}
+        st_name = d.get("status", "OFFLINE")
+        h_val = float(d.get("health_score", 100))
+        node_state = "critical" if (st_name == "REVOKED" or h_val < 50) else ("warning" if (st_name == "OFFLINE" or h_val < 80) else "healthy")
+        cpu_str = f"{tel['cpu_percent']:.1f}%" if "cpu_percent" in tel else "N/A"
+        ram_str = f"{tel['ram_percent']:.1f}%" if "ram_percent" in tel else "N/A"
+        disk_str = f"{tel['disk_percent']:.1f}%" if "disk_percent" in tel else "N/A"
+        fleet_3d_nodes.append({
+            "label": d.get("hostname", "host"),
+            "state": node_state,
+            "size": 16 if st_name == "ONLINE" else 13,
+            "detail": (
+                f"Status: {esc(st_name)} &bull; Org: {esc(d.get('client_org', 'Default'))}<br>"
+                f"CPU: {esc(cpu_str)} | RAM: {esc(ram_str)} | Disk: {esc(disk_str)}<br>"
+                f"Health: {esc(h_val)}% | IP: {esc(d.get('ip_address') or 'N/A')}"
+            ),
+        })
+    render_3d_topology_scene(
+        nodes=fleet_3d_nodes,
+        center_label="AI Control Plane",
+        center_sub="Live Fleet Hub",
+        title="Live 3D Fleet Topology & Telemetry Streams",
+        height=340,
+    )
 
     st.markdown("#### 💻 Monitored Endpoints")
     device_cols = st.columns(min(len(devices), 3))

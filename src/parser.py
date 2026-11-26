@@ -2,6 +2,8 @@
 Infrastructure Log Parser Module.
 Parses various enterprise infrastructure log formats into structured DataFrames.
 """
+import csv
+import io
 import re
 import json
 from datetime import datetime
@@ -132,15 +134,59 @@ class InfrastructureLogParser:
             "raw_line": raw_line
         }
 
+    @staticmethod
+    def _normalize_dict_record(data: Dict[str, Any], line_no: int) -> Dict[str, Any]:
+        lowered = {str(k).strip().lower(): v for k, v in data.items()}
+        ts = lowered.get("time") or lowered.get("timestamp") or "N/A"
+        lvl = lowered.get("level") or lowered.get("severity") or "INFO"
+        svc = lowered.get("service") or lowered.get("app") or lowered.get("name") or lowered.get("host") or "unknown-service"
+        msg = lowered.get("msg") or lowered.get("message") or ""
+        return {
+            "line_no": int(lowered.get("line_no") or line_no),
+            "timestamp": str(ts),
+            "level": str(lvl).upper(),
+            "service": str(svc),
+            "message": str(msg),
+            "raw_line": json.dumps(data, default=str),
+        }
+
     @classmethod
     def parse_text(cls, log_content: str) -> pd.DataFrame:
-        """Parses multi-line text into a structured pandas DataFrame."""
+        """Parses multi-line text, JSON arrays, or CSV logs into a structured pandas DataFrame."""
+        stripped = (log_content or "").strip()
+        if not stripped:
+            return pd.DataFrame(columns=["line_no", "timestamp", "level", "service", "message", "raw_line"])
+
         records = []
-        lines = log_content.splitlines()
-        for idx, line in enumerate(lines, start=1):
-            parsed = cls.parse_line(line, line_no=idx)
-            if parsed:
-                records.append(parsed)
+        # Support JSON array log files
+        if stripped.startswith("[") and stripped.endswith("]"):
+            try:
+                arr = json.loads(stripped)
+                if isinstance(arr, list):
+                    for idx, item in enumerate(arr, start=1):
+                        if isinstance(item, dict):
+                            records.append(cls._normalize_dict_record(item, idx))
+            except Exception:
+                records = []
+
+        # Support CSV log files (e.g. exported live/parsed logs)
+        if not records:
+            first_line = stripped.splitlines()[0].lower()
+            if "," in first_line and any(col in first_line for col in ("message", "msg", "level", "service", "timestamp")):
+                try:
+                    reader = csv.DictReader(io.StringIO(stripped))
+                    if reader.fieldnames and any(str(f).strip().lower() in ("message", "msg") for f in reader.fieldnames):
+                        for idx, row in enumerate(reader, start=1):
+                            records.append(cls._normalize_dict_record(row, idx))
+                except Exception:
+                    records = []
+
+        if not records:
+            lines = log_content.splitlines()
+            for idx, line in enumerate(lines, start=1):
+                parsed = cls.parse_line(line, line_no=idx)
+                if parsed:
+                    records.append(parsed)
 
         if not records:
             return pd.DataFrame(columns=["line_no", "timestamp", "level", "service", "message", "raw_line"])
