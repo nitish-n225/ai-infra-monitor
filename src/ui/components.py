@@ -1677,8 +1677,8 @@ def render_assistant_faq_grid(key_prefix: str) -> Optional[str]:
 
 def _normalize_wav_bytes(wav_bytes: bytes) -> tuple[bytes, int]:
     """
-    Normalizes quiet 16-bit PCM WAV recordings from browser microphones.
-    Returns (normalized_wav_bytes, peak_amplitude).
+    Centers DC offset and normalizes quiet 16-bit PCM WAV recordings from browser mics.
+    Returns (normalized_wav_bytes, ac_peak_amplitude).
     """
     with wave.open(io.BytesIO(wav_bytes), "rb") as wf:
         nchannels = wf.getnchannels()
@@ -1689,14 +1689,19 @@ def _normalize_wav_bytes(wav_bytes: bytes) -> tuple[bytes, int]:
     if sampwidth != 2 or not frames:
         return wav_bytes, 1
 
-    samples = np.frombuffer(frames, dtype=np.int16)
-    peak = int(np.max(np.abs(samples))) if samples.size > 0 else 0
-    if peak == 0:
+    samples = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
+    if samples.size == 0:
+        return wav_bytes, 0
+
+    centered = samples - float(np.mean(samples))
+    peak = int(np.max(np.abs(centered)))
+    rms = float(np.sqrt(np.mean(centered ** 2)))
+    if peak < 30 or rms < 5.0:
         return wav_bytes, 0
 
     if peak < 18000:
-        gain = min(20.0, 22000.0 / float(peak))
-        boosted = np.clip(samples.astype(np.float32) * gain, -32767.0, 32767.0).astype(np.int16)
+        gain = min(40.0, 22000.0 / float(peak))
+        boosted = np.clip(centered * gain, -32767.0, 32767.0).astype(np.int16)
         out = io.BytesIO()
         with wave.open(out, "wb") as wf_out:
             wf_out.setnchannels(nchannels)
@@ -1709,11 +1714,11 @@ def _normalize_wav_bytes(wav_bytes: bytes) -> tuple[bytes, int]:
 
 def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Optional[str], Optional[str]]:
     """
-    Transcribes recorded WAV bytes using SpeechRecognition after PCM gain normalization.
+    Transcribes recorded WAV bytes using SpeechRecognition after DC-centering and gain normalization.
     Returns (transcript_text, error_reason).
     """
     if not wav_bytes or len(wav_bytes) < 100:
-        return None, "Recording was empty. Click mic, speak, and stop."
+        return None, "Recording was empty. Click mic, speak, then click Stop."
     try:
         import speech_recognition as sr
     except ImportError:
@@ -1722,7 +1727,10 @@ def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Op
     try:
         norm_bytes, peak = _normalize_wav_bytes(wav_bytes)
         if peak == 0:
-            return None, "Mic recorded pure silence — check your Windows/Edge microphone input is not muted."
+            return (
+                None,
+                "Mic recorded silence (0% audio). Unmute your laptop mic/F4 key or check Edge's mic icon left of the URL.",
+            )
     except Exception:
         norm_bytes = wav_bytes
 
@@ -1730,7 +1738,7 @@ def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Op
     try:
         with sr.AudioFile(io.BytesIO(norm_bytes)) as source:
             audio_data = recognizer.record(source)
-        for lang in (language, "en-US"):
+        for lang in (language, "en-US", "en-GB"):
             try:
                 text = recognizer.recognize_google(audio_data, language=lang)
                 clean = (text or "").strip()
@@ -1738,7 +1746,7 @@ def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Op
                     return clean, None
             except sr.UnknownValueError:
                 continue
-        return None, "Speech was unclear — try speaking closer to the mic or check mic volume."
+        return None, f"Voice unclear (signal peak {peak}/32767) — speak closer to the mic and click Stop."
     except sr.RequestError as req_err:
         return None, f"Speech recognition service unavailable: {req_err}"
     except Exception as exc:
@@ -1748,11 +1756,13 @@ def _transcribe_wav_bytes(wav_bytes: bytes, language: str = "en-IN") -> tuple[Op
 def render_voice_assistant_bar(
     latest_answer_text: str = "",
     latest_user_text: str = "",
-    height: int = 86,
+    height: int = 92,
 ) -> None:
     """
-    Renders a clean YouTube-style rolling Closed Captions subtitle strip
-    paired with a Read-Aloud Speak button (no 'CC: ON' badge clutter).
+    Renders a clean YouTube-style rolling Closed Captions subtitle strip with:
+    - Live SpeechRecognition ('Live') that types words in real time like YouTube CC and auto-submits
+    - Instant Microphone signal tester ('Test') to diagnose muted/wrong Windows or Edge microphones
+    - Read-Aloud ('Speak') with rolling yellow active-word captions (no 'CC: ON' badge clutter)
     """
     clean_ai = re.sub(r"[`*_#>\[\]\(\)]", " ", latest_answer_text or "")
     clean_ai = re.sub(r"\s+", " ", clean_ai).strip()[:900]
@@ -1773,16 +1783,30 @@ def render_voice_assistant_bar(
         overflow: hidden;
       }}
       .yt-cc-wrap {{
+        position: relative;
         height: {height - 6}px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        padding: 8px 14px;
+        padding: 8px 12px 10px 14px;
         border-radius: 12px;
-        background: rgba(6, 8, 16, 0.84);
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(6, 8, 16, 0.86);
+        border: 1px solid rgba(148, 163, 184, 0.22);
         box-shadow: 0 10px 26px rgba(0, 0, 0, 0.52);
+        overflow: hidden;
+      }}
+      .vu-track {{
+        position: absolute;
+        left: 0; right: 0; bottom: 0;
+        height: 3px;
+        background: rgba(15, 23, 42, 0.9);
+      }}
+      .vu-fill {{
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #22d3ee, #10b981, #fde047);
+        transition: width 80ms linear;
       }}
       .yt-captions {{
         flex: 1;
@@ -1794,7 +1818,7 @@ def render_voice_assistant_bar(
         text-align: center;
       }}
       .yt-you {{
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 600;
         color: #67e8f9;
         white-space: nowrap;
@@ -1807,7 +1831,7 @@ def render_voice_assistant_bar(
         max-width: 100%;
         padding: 3px 10px;
         border-radius: 6px;
-        background: rgba(0, 0, 0, 0.72);
+        background: rgba(0, 0, 0, 0.76);
         font-size: 12.5px;
         line-height: 1.35;
         color: #f8fafc;
@@ -1819,15 +1843,26 @@ def render_voice_assistant_bar(
         color: #fde047;
         font-weight: 700;
       }}
-      .btn {{
+      .yt-actions {{
         flex-shrink: 0;
-        display: inline-flex; align-items: center; gap: 5px;
-        background: linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.96));
-        border: 1px solid rgba(34,211,238,0.4);
-        color: #e0f2fe; border-radius: 8px; padding: 6px 11px;
-        font-size: 11.5px; font-weight: 600; cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }}
-      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.3); }}
+      .btn {{
+        display: inline-flex; align-items: center; gap: 4px;
+        background: linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.96));
+        border: 1px solid rgba(34,211,238,0.38);
+        color: #e0f2fe; border-radius: 8px; padding: 6px 9px;
+        font-size: 11px; font-weight: 600; cursor: pointer;
+        white-space: nowrap;
+      }}
+      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 10px rgba(34,211,238,0.28); }}
+      .btn.live {{
+        border-color: #ef4444; color: #fecaca;
+        background: rgba(127, 29, 29, 0.65);
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
+      }}
       .btn.speaking {{ border-color: #10b981; color: #a7f3d0; }}
     </style>
     </head>
@@ -1837,27 +1872,48 @@ def render_voice_assistant_bar(
           <div class="yt-you" id="ccUser"></div>
           <div class="yt-sub" id="ccSub"></div>
         </div>
-        <button class="btn" id="speakBtn">🔊 Speak</button>
+        <div class="yt-actions">
+          <button class="btn" id="liveBtn" title="YouTube-style instant speech recognition">🎙️ Live</button>
+          <button class="btn" id="testBtn" title="Check microphone signal & device">🎚️ Test</button>
+          <button class="btn" id="speakBtn" title="Read latest AI answer aloud">🔊 Speak</button>
+        </div>
+        <div class="vu-track"><div class="vu-fill" id="vuFill"></div></div>
       </div>
       <script>
         const DATA = {payload_json};
         const ccUser = document.getElementById("ccUser");
         const ccSub = document.getElementById("ccSub");
+        const liveBtn = document.getElementById("liveBtn");
+        const testBtn = document.getElementById("testBtn");
         const speakBtn = document.getElementById("speakBtn");
+        const vuFill = document.getElementById("vuFill");
         const escHtml = (s) => String(s || "").replace(/[&<>"']/g, m => ({{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}}[m]));
 
-        const aiText = DATA.ai || "Speak into the mic or ask a question below.";
+        const aiText = DATA.ai || "Click Live to talk, or record on the left & click Stop.";
         ccUser.textContent = DATA.user ? ("🗣️ " + DATA.user) : "";
         if (!DATA.user) ccUser.style.display = "none";
 
-        function renderRollingCaption(charIdx = -1) {{
+        function setTopNote(txt) {{
+          if (txt) {{
+            ccUser.style.display = "block";
+            ccUser.textContent = txt;
+          }} else if (DATA.user) {{
+            ccUser.style.display = "block";
+            ccUser.textContent = "🗣️ " + DATA.user;
+          }} else {{
+            ccUser.style.display = "none";
+          }}
+        }}
+
+        function renderRollingCaption(charIdx = -1, customText = null) {{
+          const txt = customText !== null ? customText : aiText;
           if (charIdx < 0) {{
-            ccSub.textContent = aiText.slice(0, 95) + (aiText.length > 95 ? "..." : "");
+            const tail = txt.length > 90 ? ("..." + txt.slice(-87)) : txt;
+            ccSub.textContent = customText !== null ? tail : (txt.slice(0, 92) + (txt.length > 92 ? "..." : ""));
             return;
           }}
-          // YouTube-style rolling window centered around the currently spoken word
           const winStart = Math.max(0, charIdx - 28);
-          const snippet = aiText.slice(winStart, winStart + 86);
+          const snippet = txt.slice(winStart, winStart + 86);
           const rel = charIdx - winStart;
           const sp = snippet.indexOf(" ", rel);
           const end = sp === -1 ? snippet.length : sp;
@@ -1869,11 +1925,172 @@ def render_voice_assistant_bar(
         renderRollingCaption(-1);
 
         const hostWin = (() => {{
-          try {{ return (window.parent && window.parent.speechSynthesis) ? window.parent : window; }}
+          try {{ return (window.parent && window.parent.location) ? window.parent : window; }}
           catch (e) {{ return window; }}
         }})();
-        const synth = hostWin.speechSynthesis || window.speechSynthesis;
 
+        function pushToChatInput(text) {{
+          try {{
+            const doc = hostWin.document;
+            const areas = Array.from(doc.querySelectorAll('textarea[data-testid="stChatInputTextArea"]'));
+            const ta = areas.find(el => el.offsetParent !== null) || areas[areas.length - 1];
+            if (!ta) return false;
+            const setter = Object.getOwnPropertyDescriptor(hostWin.HTMLTextAreaElement.prototype, "value").set;
+            setter.call(ta, text);
+            ta.dispatchEvent(new hostWin.Event("input", {{ bubbles: true }}));
+            ta.focus();
+            setTimeout(() => {{
+              const btns = Array.from(doc.querySelectorAll('button[data-testid="stChatInputSubmitButton"]'));
+              const sb = btns.find(el => el.offsetParent !== null) || btns[btns.length - 1];
+              if (sb && !sb.disabled) sb.click();
+            }}, 140);
+            return true;
+          }} catch (e) {{
+            return false;
+          }}
+        }}
+
+        // 1) YouTube-style Live Speech Recognition
+        const SR = hostWin.SpeechRecognition || hostWin.webkitSpeechRecognition || window.SpeechRecognition || window.webkitSpeechRecognition;
+        let rec = null;
+        let isListening = false;
+        let latestTranscript = "";
+
+        liveBtn.onclick = async () => {{
+          if (!SR) {{
+            setTopNote("⚠️ Browser live speech unsupported");
+            ccSub.textContent = "Use 🎙️ Speak on the left (click ● → talk → click Stop).";
+            return;
+          }}
+          if (isListening && rec) {{
+            rec.stop();
+            return;
+          }}
+          try {{
+            const nav = hostWin.navigator || navigator;
+            if (nav.mediaDevices && nav.mediaDevices.enumerateDevices) {{
+              const devs = await nav.mediaDevices.enumerateDevices();
+              const mics = devs.filter(d => d.kind === "audioinput" && d.label);
+              if (mics.length > 0) setTopNote("🎧 " + mics[0].label.slice(0, 48));
+            }}
+          }} catch (e) {{}}
+
+          rec = new SR();
+          rec.lang = "en-IN";
+          rec.interimResults = true;
+          rec.continuous = false;
+          latestTranscript = "";
+
+          rec.onstart = () => {{
+            isListening = true;
+            liveBtn.classList.add("live");
+            liveBtn.textContent = "⏹ Stop";
+            ccSub.innerHTML = `<span class="yt-word-active">Listening... speak your question now</span>`;
+          }};
+          rec.onspeechstart = () => {{
+            ccSub.innerHTML = `<span class="yt-word-active">Hearing voice...</span>`;
+          }};
+          rec.onresult = (ev) => {{
+            let combined = "";
+            let finalDone = false;
+            for (let i = 0; i < ev.results.length; i++) {{
+              combined += ev.results[i][0].transcript;
+              if (ev.results[i].isFinal) finalDone = true;
+            }}
+            latestTranscript = combined.trim();
+            if (latestTranscript) {{
+              const words = latestTranscript.split(/\\s+/);
+              const lastWord = words.pop() || "";
+              const head = words.join(" ");
+              ccSub.innerHTML = `${{escHtml(head ? head + " " : "")}}<span class="yt-word-active">${{escHtml(lastWord)}}</span>`;
+            }}
+            if (finalDone && latestTranscript) {{
+              setTopNote("🗣️ " + latestTranscript);
+              pushToChatInput(latestTranscript);
+            }}
+          }};
+          rec.onerror = (ev) => {{
+            const code = ev.error || "blocked";
+            if (code === "no-speech" || code === "audio-capture") {{
+              setTopNote("⚠️ 0% voice detected on Edge mic");
+              ccSub.textContent = "Unmute laptop F4/mic or click Test to check mic signal.";
+            }} else if (code === "network" || code === "service-not-allowed") {{
+              setTopNote("⚠️ Edge speech service offline/blocked");
+              ccSub.textContent = "Use left recorder: Click ● → speak → click Stop.";
+            }} else {{
+              ccSub.textContent = "Mic status: " + code + " — check left Edge address-bar mic icon.";
+            }}
+          }};
+          rec.onend = () => {{
+            isListening = false;
+            liveBtn.classList.remove("live");
+            liveBtn.textContent = "🎙️ Live";
+            if (latestTranscript && ccUser.textContent.indexOf(latestTranscript) === -1) {{
+              setTopNote("🗣️ " + latestTranscript);
+              pushToChatInput(latestTranscript);
+            }}
+          }};
+          rec.start();
+        }};
+
+        // 2) 4-Second Live Mic Signal & Device Tester
+        testBtn.onclick = async () => {{
+          const nav = hostWin.navigator || navigator;
+          if (!nav.mediaDevices || !nav.mediaDevices.getUserMedia) {{
+            ccSub.textContent = "Microphone API unavailable in this browser.";
+            return;
+          }}
+          testBtn.disabled = true;
+          testBtn.textContent = "⏳ ...";
+          try {{
+            const stream = await nav.mediaDevices.getUserMedia({{ audio: {{ autoGainControl: true, noiseSuppression: false }} }});
+            const trackLabel = (stream.getAudioTracks()[0] && stream.getAudioTracks()[0].label) || "Default Microphone";
+            setTopNote("🎧 " + trackLabel.slice(0, 50));
+            const Ctx = hostWin.AudioContext || hostWin.webkitAudioContext || window.AudioContext;
+            const ctx = new Ctx();
+            const src = ctx.createMediaStreamSource(stream);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 512;
+            src.connect(analyser);
+            const buf = new Uint8Array(analyser.fftSize);
+            let maxLvl = 0;
+            const startTs = Date.now();
+            const timer = setInterval(() => {{
+              analyser.getByteTimeDomainData(buf);
+              let sum = 0;
+              for (let i = 0; i < buf.length; i++) {{
+                const d = (buf[i] - 128) / 128;
+                sum += d * d;
+              }}
+              const pct = Math.min(100, Math.round(Math.sqrt(sum / buf.length) * 320));
+              if (pct > maxLvl) maxLvl = pct;
+              vuFill.style.width = pct + "%";
+              ccSub.innerHTML = pct > 3
+                ? `Mic active: <span class="yt-word-active">${{pct}}% signal (OK!)</span>`
+                : `Speak loudly now... <span class="yt-word-active">${{pct}}% (Peak ${{maxLvl}}%)</span>`;
+              if (Date.now() - startTs > 4200) {{
+                clearInterval(timer);
+                stream.getTracks().forEach(t => t.stop());
+                ctx.close().catch(() => {{}});
+                vuFill.style.width = "0%";
+                testBtn.disabled = false;
+                testBtn.textContent = "🎚️ Test";
+                if (maxLvl <= 2) {{
+                  ccSub.innerHTML = `<span class="yt-word-active">0% Signal!</span> Mic muted in Windows/F4 key or wrong Edge mic selected.`;
+                }} else {{
+                  ccSub.textContent = `Mic OK (Peak ${{maxLvl}}%)! Click Live or left recorder + Stop.`;
+                }}
+              }}
+            }}, 80);
+          }} catch (err) {{
+            testBtn.disabled = false;
+            testBtn.textContent = "🎚️ Test";
+            ccSub.textContent = "Mic permission error: " + (err && err.message ? err.message : "blocked");
+          }}
+        }};
+
+        // 3) Read-Aloud Speak button with YouTube rolling active-word captions
+        const synth = hostWin.speechSynthesis || window.speechSynthesis;
         let fallbackTimer = null;
         speakBtn.onclick = () => {{
           if (!synth) {{
@@ -1900,7 +2117,6 @@ def render_voice_assistant_bar(
               renderRollingCaption(ev.charIndex);
             }}
           }};
-          // Smooth rolling caption fallback if a voice engine doesn't fire onboundary
           fallbackTimer = setInterval(() => {{
             if (!gotBoundary && synth.speaking) {{
               simPos = Math.min(aiText.length - 1, simPos + 5);
@@ -1931,7 +2147,7 @@ def render_voice_assistant_controls(
 ) -> Optional[str]:
     """
     Renders a native top-level Streamlit microphone recorder (`st.audio_input` at native mic rate)
-    paired with YouTube-style rolling closed captions. Returns transcribed prompt if spoken.
+    paired with YouTube-style live SpeechRecognition & closed captions. Returns transcribed prompt if spoken.
     """
     col_mic, col_cc = st.columns([1.45, 2.55])
     transcribed_prompt: Optional[str] = None
@@ -1939,7 +2155,7 @@ def render_voice_assistant_controls(
 
     with col_mic:
         audio_file = st.audio_input(
-            "🎙️ Speak Question",
+            "🎙️ Record & Stop (● → Talk → ◼)",
             sample_rate=None,
             key=f"{key_prefix}_audio_in",
         )
@@ -1962,7 +2178,7 @@ def render_voice_assistant_controls(
         render_voice_assistant_bar(
             latest_answer_text=latest_answer_text,
             latest_user_text=cc_user_display,
-            height=86,
+            height=92,
         )
     return transcribed_prompt
 
