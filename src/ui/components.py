@@ -2,7 +2,9 @@
 3D Glassmorphic UI Design System & Interactive 3D Canvas Components for
 Enterprise Autonomous AI Infrastructure Monitoring System.
 """
+import hashlib
 import html
+import io
 import json
 import re
 from typing import Any, Dict, List, Optional
@@ -1671,10 +1673,10 @@ def render_assistant_faq_grid(key_prefix: str) -> Optional[str]:
     return selected
 
 
-def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -> None:
+def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 72) -> None:
     """
-    Renders a compact browser Voice-Typing (SpeechRecognition) + Read-Aloud (speechSynthesis) bar
-    aligned with the compact chat input. Zero external dependencies.
+    Renders a compact browser Voice-Typing (parent-window SpeechRecognition + live waveform)
+    and Read-Aloud (speechSynthesis) bar aligned with the compact chat input.
     """
     clean_speech = re.sub(r"[`*_#>\[\]\(\)]", " ", latest_answer_text or "")
     clean_speech = re.sub(r"\s+", " ", clean_speech).strip()[:700]
@@ -1696,35 +1698,62 @@ def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -
       .bar {{
         max-width: 740px;
         margin: 0 auto;
-        height: 44px;
+        min-height: 58px;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 0 12px;
-        border-radius: 11px;
-        background: rgba(10, 16, 34, 0.82);
-        border: 1px solid rgba(34, 211, 238, 0.28);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 6px 18px rgba(0,0,0,0.4);
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+        padding: 7px 12px;
+        border-radius: 12px;
+        background: rgba(10, 16, 34, 0.86);
+        border: 1px solid rgba(34, 211, 238, 0.32);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 20px rgba(0,0,0,0.45);
       }}
+      .row {{ display: flex; align-items: center; justify-content: space-between; gap: 8px; }}
       .left {{ display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }}
       .btn {{
         display: inline-flex; align-items: center; gap: 5px;
-        background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
-        border: 1px solid rgba(34,211,238,0.38);
-        color: #e0f2fe; border-radius: 8px; padding: 5px 10px;
+        background: linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.96));
+        border: 1px solid rgba(34,211,238,0.42);
+        color: #e0f2fe; border-radius: 8px; padding: 4px 10px;
         font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
       }}
-      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.28); }}
+      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.3); }}
       .btn.listening {{
         border-color: #ef4444; color: #fecaca;
-        background: rgba(127, 29, 29, 0.65);
-        box-shadow: 0 0 14px rgba(239,68,68,0.45);
+        background: rgba(127, 29, 29, 0.72);
+        box-shadow: 0 0 16px rgba(239,68,68,0.55);
+      }}
+      .eq {{
+        display: none; align-items: flex-end; gap: 2.5px; height: 14px;
+      }}
+      .eq.active {{ display: inline-flex; }}
+      .eq span {{
+        width: 3px; border-radius: 2px; background: #22d3ee;
+        animation: eqBounce 0.7s ease-in-out infinite;
+      }}
+      .eq span:nth-child(2) {{ animation-delay: 0.12s; background: #10b981; }}
+      .eq span:nth-child(3) {{ animation-delay: 0.24s; background: #38bdf8; }}
+      .eq span:nth-child(4) {{ animation-delay: 0.36s; background: #818cf8; }}
+      .eq span:nth-child(5) {{ animation-delay: 0.48s; background: #22d3ee; }}
+      @keyframes eqBounce {{
+        0%, 100% {{ height: 4px; }}
+        50% {{ height: 14px; }}
       }}
       .status {{
         font-size: 11.5px; color: #94a3b8;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }}
+      .transcript {{
+        display: none;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px; color: #67e8f9;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(34, 211, 238, 0.22);
+        border-radius: 6px; padding: 3px 8px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }}
+      .transcript.show {{ display: block; }}
       .right {{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }}
       label {{ font-size: 11px; color: #cbd5e1; display: flex; align-items: center; gap: 4px; cursor: pointer; }}
       input[type="checkbox"] {{ accent-color: #22d3ee; cursor: pointer; }}
@@ -1732,40 +1761,52 @@ def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -
     </head>
     <body>
       <div class="bar">
-        <div class="left">
-          <button class="btn" id="micBtn" title="Speak your question">🎙️ Voice Type</button>
-          <span class="status" id="statusTxt">Click mic to speak into chat</span>
+        <div class="row">
+          <div class="left">
+            <button class="btn" id="micBtn" title="Speak your question">🎙️ Voice Type</button>
+            <div class="eq" id="eq"><span></span><span></span><span></span><span></span><span></span></div>
+            <span class="status" id="statusTxt">Click mic to speak (or use 🎙️ Record on right)</span>
+          </div>
+          <div class="right">
+            <label title="Automatically submit after voice capture"><input type="checkbox" id="autoSend" checked /> Auto-send</label>
+            <button class="btn" id="speakBtn" title="Read latest reply aloud">🔊 Speak Reply</button>
+          </div>
         </div>
-        <div class="right">
-          <label title="Automatically submit after voice capture"><input type="checkbox" id="autoSend" checked /> Auto-send</label>
-          <button class="btn" id="speakBtn" title="Read latest reply aloud">🔊 Speak Reply</button>
-        </div>
+        <div class="transcript" id="transcriptBox"></div>
       </div>
       <script>
         const DATA = {payload_json};
         const micBtn = document.getElementById("micBtn");
         const speakBtn = document.getElementById("speakBtn");
         const statusTxt = document.getElementById("statusTxt");
+        const eq = document.getElementById("eq");
+        const transcriptBox = document.getElementById("transcriptBox");
         const autoSend = document.getElementById("autoSend");
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        // Run SpeechRecognition on the top-level Streamlit window (not the sandboxed iframe) so microphone permission works!
+        const hostWin = (() => {{
+          try {{ return (window.parent && window.parent.document) ? window.parent : window; }}
+          catch (e) {{ return window; }}
+        }})();
+        const SR = hostWin.SpeechRecognition || hostWin.webkitSpeechRecognition || window.SpeechRecognition || window.webkitSpeechRecognition;
         let rec = null, listening = false;
 
         function pushToChatInput(text) {{
           try {{
-            const doc = window.parent.document;
+            const doc = hostWin.document;
             const areas = Array.from(doc.querySelectorAll('textarea[data-testid="stChatInputTextArea"]'));
             const ta = areas.find(el => el.offsetParent !== null) || areas[areas.length - 1];
             if (!ta) return false;
-            const setter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, "value").set;
+            const setter = Object.getOwnPropertyDescriptor(hostWin.HTMLTextAreaElement.prototype, "value").set;
             setter.call(ta, text);
-            ta.dispatchEvent(new window.parent.Event("input", {{ bubbles: true }}));
+            ta.dispatchEvent(new hostWin.Event("input", {{ bubbles: true }}));
             ta.focus();
             if (autoSend.checked) {{
               setTimeout(() => {{
                 const btns = Array.from(doc.querySelectorAll('button[data-testid="stChatInputSubmitButton"]'));
                 const sb = btns.find(el => el.offsetParent !== null) || btns[btns.length - 1];
                 if (sb && !sb.disabled) sb.click();
-              }}, 120);
+              }}, 140);
             }}
             return true;
           }} catch (e) {{
@@ -1773,11 +1814,26 @@ def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -
           }}
         }}
 
-        if (!SR) {{
-          micBtn.disabled = true;
-          micBtn.style.opacity = "0.55";
-          statusTxt.textContent = "Voice typing requires Chrome or Edge";
-        }} else {{
+        async function startVoiceCapture() {{
+          if (!SR) {{
+            statusTxt.textContent = "Live speech unsupported here — use 🎙️ Record button";
+            return;
+          }}
+          if (listening && rec) {{
+            rec.stop();
+            return;
+          }}
+          // Request mic permission on parent window first so Edge/Chrome shows permission prompt cleanly
+          try {{
+            if (hostWin.navigator && hostWin.navigator.mediaDevices && hostWin.navigator.mediaDevices.getUserMedia) {{
+              const stream = await hostWin.navigator.mediaDevices.getUserMedia({{ audio: true }});
+              stream.getTracks().forEach(t => t.stop());
+            }}
+          }} catch (permErr) {{
+            statusTxt.textContent = "Mic permission blocked — allow mic or use 🎙️ Record";
+            return;
+          }}
+
           rec = new SR();
           rec.lang = "en-US";
           rec.interimResults = true;
@@ -1787,7 +1843,10 @@ def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -
             listening = true;
             micBtn.classList.add("listening");
             micBtn.textContent = "⏹ Listening...";
-            statusTxt.textContent = "Speak your question now...";
+            eq.classList.add("active");
+            statusTxt.style.color = "#67e8f9";
+            statusTxt.textContent = "Listening — speak your question...";
+            transcriptBox.classList.remove("show");
           }};
           rec.onresult = (ev) => {{
             let transcript = "";
@@ -1796,50 +1855,102 @@ def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -
               transcript += ev.results[i][0].transcript;
               if (ev.results[i].isFinal) isFinal = true;
             }}
-            statusTxt.textContent = transcript;
+            transcriptBox.textContent = "🗣️ Heard: " + transcript;
+            transcriptBox.classList.add("show");
             if (isFinal && transcript.trim()) {{
               const ok = pushToChatInput(transcript.trim());
+              statusTxt.style.color = "#10b981";
+              statusTxt.textContent = ok ? "Sent to chat!" : "Captured (copied to clipboard)";
               if (!ok && navigator.clipboard) {{
                 navigator.clipboard.writeText(transcript.trim()).catch(() => {{}});
-                statusTxt.textContent = "Copied: " + transcript.trim();
               }}
             }}
           }};
           rec.onerror = (ev) => {{
-            statusTxt.textContent = "Mic error: " + (ev.error || "blocked");
+            statusTxt.style.color = "#f59e0b";
+            statusTxt.textContent = "Voice error (" + (ev.error || "unavailable") + ") — try 🎙️ Record";
           }};
           rec.onend = () => {{
             listening = false;
             micBtn.classList.remove("listening");
             micBtn.textContent = "🎙️ Voice Type";
+            eq.classList.remove("active");
           }};
-          micBtn.onclick = () => {{
-            if (listening) rec.stop(); else rec.start();
-          }};
+          try {{
+            rec.start();
+          }} catch (e) {{
+            statusTxt.textContent = "Could not start mic — try 🎙️ Record";
+          }}
         }}
 
+        micBtn.onclick = startVoiceCapture;
+
+        const synth = hostWin.speechSynthesis || window.speechSynthesis;
         speakBtn.onclick = () => {{
-          if (!("speechSynthesis" in window)) {{
+          if (!synth) {{
             statusTxt.textContent = "Speech output unsupported in this browser";
             return;
           }}
-          if (window.speechSynthesis.speaking) {{
-            window.speechSynthesis.cancel();
+          if (synth.speaking) {{
+            synth.cancel();
             speakBtn.textContent = "🔊 Speak Reply";
             return;
           }}
           const text = DATA.reply || "AI Infrastructure Assistant is ready. Ask any question about your logs or fleet.";
-          const utter = new SpeechSynthesisUtterance(text);
+          const Utter = hostWin.SpeechSynthesisUtterance || window.SpeechSynthesisUtterance;
+          const utter = new Utter(text);
           utter.rate = 1.03;
           utter.onend = () => {{ speakBtn.textContent = "🔊 Speak Reply"; }};
           speakBtn.textContent = "⏹ Stop Voice";
-          window.speechSynthesis.speak(utter);
+          synth.speak(utter);
         }};
       </script>
     </body>
     </html>
     """
     components.html(html_doc, height=height, scrolling=False)
+
+
+def _transcribe_wav_bytes(wav_bytes: bytes) -> Optional[str]:
+    """Transcribes recorded WAV bytes using SpeechRecognition if available."""
+    try:
+        import speech_recognition as sr
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(io.BytesIO(wav_bytes)) as source:
+            audio_data = recognizer.record(source)
+        text = recognizer.recognize_google(audio_data)
+        return (text or "").strip() or None
+    except Exception:
+        return None
+
+
+def render_voice_assistant_controls(key_prefix: str, latest_answer_text: str = "") -> Optional[str]:
+    """
+    Renders both live browser Voice-Type + Read-Aloud bar AND a native Streamlit
+    audio waveform recorder fallback (`st.audio_input`). Returns transcribed text if recorded.
+    """
+    col_bar, col_rec = st.columns([4.6, 1.1])
+    with col_bar:
+        render_voice_assistant_bar(latest_answer_text, height=74)
+    transcribed_prompt: Optional[str] = None
+    with col_rec:
+        with st.popover("🎙️ Record", use_container_width=True):
+            st.caption("Native Microphone Recorder (shows live waveform)")
+            audio_file = st.audio_input("Speak & stop to send", sample_rate=16000, key=f"{key_prefix}_audio_in")
+            if audio_file is not None:
+                raw_bytes = audio_file.getvalue()
+                sig = hashlib.sha256(raw_bytes).hexdigest()[:16]
+                state_key = f"{key_prefix}_last_audio_sig"
+                if st.session_state.get(state_key) != sig:
+                    st.session_state[state_key] = sig
+                    with st.spinner("Transcribing voice..."):
+                        text = _transcribe_wav_bytes(raw_bytes)
+                    if text:
+                        st.success(f"🗣️ Heard: **{text}**")
+                        transcribed_prompt = text
+                    else:
+                        st.warning("Could not transcribe audio (check internet or speak clearly).")
+    return transcribed_prompt
 
 
 def render_stage_badge(stage_name: str, status: str) -> None:

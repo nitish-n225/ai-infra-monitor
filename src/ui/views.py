@@ -17,7 +17,7 @@ from src.ui.components import (
     render_3d_vector_constellation,
     render_assistant_faq_grid,
     render_metric_card,
-    render_voice_assistant_bar,
+    render_voice_assistant_controls,
 )
 
 
@@ -439,9 +439,9 @@ def render_assistant_tab(
                     for ev in evidence:
                         st.code(f"[Line {ev.get('line_no', 0)}] [{ev.get('timestamp', 'N/A')}] [{ev.get('service', 'unknown')}] [{ev.get('level', 'INFO')}] {ev.get('message', '')}")
 
-    render_voice_assistant_bar((last_ai_msg or {}).get("content", ""))
+    voice_prompt = render_voice_assistant_controls("offline_ai", (last_ai_msg or {}).get("content", ""))
     chat_prompt = st.chat_input("Ask about incidents, root causes, health, or recovery...")
-    active_prompt = submitted_prompt or chat_prompt
+    active_prompt = submitted_prompt or voice_prompt or chat_prompt
     if active_prompt:
         st.session_state["assistant_chat_history"].append({"role": "user", "content": active_prompt})
         with st.spinner("Analyzing logs..."):
