@@ -4,6 +4,7 @@ Enterprise Autonomous AI Infrastructure Monitoring System.
 """
 import html
 import json
+import re
 from typing import Any, Dict, List, Optional
 import streamlit as st
 import streamlit.components.v1 as components
@@ -344,6 +345,26 @@ def apply_custom_styles() -> None:
             border: 1px solid var(--border-subtle) !important;
             border-radius: 12px !important;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px -10px rgba(0, 0, 0, 0.55);
+        }
+
+        /* Compact Sleek Chat Input */
+        [data-testid="stChatInput"] {
+            max-width: 740px;
+            margin: 0.35rem auto 0.25rem auto;
+        }
+        [data-testid="stChatInput"] > div {
+            border-radius: 12px !important;
+            border: 1px solid rgba(34, 211, 238, 0.34) !important;
+            background: rgba(10, 16, 34, 0.85) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.48), 0 0 18px -6px rgba(34, 211, 238, 0.22);
+        }
+        [data-testid="stChatInputTextArea"] {
+            min-height: 2.15rem !important;
+            padding-top: 0.36rem !important;
+            padding-bottom: 0.36rem !important;
+            font-size: 0.85rem !important;
         }
 
         /* Stage Badges (compatibility) */
@@ -1648,6 +1669,177 @@ def render_assistant_faq_grid(key_prefix: str) -> Optional[str]:
                 if st.button(label, use_container_width=True, key=f"{key_prefix}_faq_ex_{idx}"):
                     selected = prompt_text
     return selected
+
+
+def render_voice_assistant_bar(latest_answer_text: str = "", height: int = 52) -> None:
+    """
+    Renders a compact browser Voice-Typing (SpeechRecognition) + Read-Aloud (speechSynthesis) bar
+    aligned with the compact chat input. Zero external dependencies.
+    """
+    clean_speech = re.sub(r"[`*_#>\[\]\(\)]", " ", latest_answer_text or "")
+    clean_speech = re.sub(r"\s+", " ", clean_speech).strip()[:700]
+    payload_json = json.dumps({"reply": clean_speech}, default=str)
+
+    html_doc = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8" />
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      body {{
+        background: transparent;
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        color: #e2e8f0;
+        overflow: hidden;
+      }}
+      .bar {{
+        max-width: 740px;
+        margin: 0 auto;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 11px;
+        background: rgba(10, 16, 34, 0.82);
+        border: 1px solid rgba(34, 211, 238, 0.28);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 6px 18px rgba(0,0,0,0.4);
+      }}
+      .left {{ display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }}
+      .btn {{
+        display: inline-flex; align-items: center; gap: 5px;
+        background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
+        border: 1px solid rgba(34,211,238,0.38);
+        color: #e0f2fe; border-radius: 8px; padding: 5px 10px;
+        font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      }}
+      .btn:hover {{ border-color: #22d3ee; box-shadow: 0 0 12px rgba(34,211,238,0.28); }}
+      .btn.listening {{
+        border-color: #ef4444; color: #fecaca;
+        background: rgba(127, 29, 29, 0.65);
+        box-shadow: 0 0 14px rgba(239,68,68,0.45);
+      }}
+      .status {{
+        font-size: 11.5px; color: #94a3b8;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }}
+      .right {{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }}
+      label {{ font-size: 11px; color: #cbd5e1; display: flex; align-items: center; gap: 4px; cursor: pointer; }}
+      input[type="checkbox"] {{ accent-color: #22d3ee; cursor: pointer; }}
+    </style>
+    </head>
+    <body>
+      <div class="bar">
+        <div class="left">
+          <button class="btn" id="micBtn" title="Speak your question">🎙️ Voice Type</button>
+          <span class="status" id="statusTxt">Click mic to speak into chat</span>
+        </div>
+        <div class="right">
+          <label title="Automatically submit after voice capture"><input type="checkbox" id="autoSend" checked /> Auto-send</label>
+          <button class="btn" id="speakBtn" title="Read latest reply aloud">🔊 Speak Reply</button>
+        </div>
+      </div>
+      <script>
+        const DATA = {payload_json};
+        const micBtn = document.getElementById("micBtn");
+        const speakBtn = document.getElementById("speakBtn");
+        const statusTxt = document.getElementById("statusTxt");
+        const autoSend = document.getElementById("autoSend");
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let rec = null, listening = false;
+
+        function pushToChatInput(text) {{
+          try {{
+            const doc = window.parent.document;
+            const areas = Array.from(doc.querySelectorAll('textarea[data-testid="stChatInputTextArea"]'));
+            const ta = areas.find(el => el.offsetParent !== null) || areas[areas.length - 1];
+            if (!ta) return false;
+            const setter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, "value").set;
+            setter.call(ta, text);
+            ta.dispatchEvent(new window.parent.Event("input", {{ bubbles: true }}));
+            ta.focus();
+            if (autoSend.checked) {{
+              setTimeout(() => {{
+                const btns = Array.from(doc.querySelectorAll('button[data-testid="stChatInputSubmitButton"]'));
+                const sb = btns.find(el => el.offsetParent !== null) || btns[btns.length - 1];
+                if (sb && !sb.disabled) sb.click();
+              }}, 120);
+            }}
+            return true;
+          }} catch (e) {{
+            return false;
+          }}
+        }}
+
+        if (!SR) {{
+          micBtn.disabled = true;
+          micBtn.style.opacity = "0.55";
+          statusTxt.textContent = "Voice typing requires Chrome or Edge";
+        }} else {{
+          rec = new SR();
+          rec.lang = "en-US";
+          rec.interimResults = true;
+          rec.continuous = false;
+
+          rec.onstart = () => {{
+            listening = true;
+            micBtn.classList.add("listening");
+            micBtn.textContent = "⏹ Listening...";
+            statusTxt.textContent = "Speak your question now...";
+          }};
+          rec.onresult = (ev) => {{
+            let transcript = "";
+            let isFinal = false;
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {{
+              transcript += ev.results[i][0].transcript;
+              if (ev.results[i].isFinal) isFinal = true;
+            }}
+            statusTxt.textContent = transcript;
+            if (isFinal && transcript.trim()) {{
+              const ok = pushToChatInput(transcript.trim());
+              if (!ok && navigator.clipboard) {{
+                navigator.clipboard.writeText(transcript.trim()).catch(() => {{}});
+                statusTxt.textContent = "Copied: " + transcript.trim();
+              }}
+            }}
+          }};
+          rec.onerror = (ev) => {{
+            statusTxt.textContent = "Mic error: " + (ev.error || "blocked");
+          }};
+          rec.onend = () => {{
+            listening = false;
+            micBtn.classList.remove("listening");
+            micBtn.textContent = "🎙️ Voice Type";
+          }};
+          micBtn.onclick = () => {{
+            if (listening) rec.stop(); else rec.start();
+          }};
+        }}
+
+        speakBtn.onclick = () => {{
+          if (!("speechSynthesis" in window)) {{
+            statusTxt.textContent = "Speech output unsupported in this browser";
+            return;
+          }}
+          if (window.speechSynthesis.speaking) {{
+            window.speechSynthesis.cancel();
+            speakBtn.textContent = "🔊 Speak Reply";
+            return;
+          }}
+          const text = DATA.reply || "AI Infrastructure Assistant is ready. Ask any question about your logs or fleet.";
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.rate = 1.03;
+          utter.onend = () => {{ speakBtn.textContent = "🔊 Speak Reply"; }};
+          speakBtn.textContent = "⏹ Stop Voice";
+          window.speechSynthesis.speak(utter);
+        }};
+      </script>
+    </body>
+    </html>
+    """
+    components.html(html_doc, height=height, scrolling=False)
 
 
 def render_stage_badge(stage_name: str, status: str) -> None:

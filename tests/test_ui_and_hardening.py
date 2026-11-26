@@ -31,6 +31,7 @@ def test_ui_modules_compile_and_escape():
         render_3d_topology_scene,
         render_3d_vector_constellation,
         render_assistant_faq_grid,
+        render_voice_assistant_bar,
     )
     import src.ui.views as views
     import src.ui.live_views as live_views
@@ -56,6 +57,7 @@ def test_ui_modules_compile_and_escape():
     assert callable(render_hero_header)
     assert callable(render_3d_ai_neural_core)
     assert callable(render_assistant_faq_grid)
+    assert callable(render_voice_assistant_bar)
     assert callable(render_3d_gauge_pair)
     assert callable(render_3d_rca_fault_graph)
     assert callable(render_3d_topology_scene)
