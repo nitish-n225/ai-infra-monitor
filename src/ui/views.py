@@ -15,6 +15,7 @@ from src.ui.components import (
     render_3d_rca_fault_graph,
     render_3d_topology_scene,
     render_3d_vector_constellation,
+    render_assistant_faq_grid,
     render_metric_card,
 )
 
@@ -424,14 +425,7 @@ def render_assistant_tab(
         height=310,
     )
 
-    col_q1, col_q2, col_q3 = st.columns(3)
-    submitted_prompt = None
-    if col_q1.button("🚨 Critical incidents?", use_container_width=True):
-        submitted_prompt = "What are the most critical incidents?"
-    if col_q2.button("💥 Why is DB failing?", use_container_width=True):
-        submitted_prompt = "Why is the database failing?"
-    if col_q3.button("🛠️ Recovery steps?", use_container_width=True):
-        submitted_prompt = "What recovery steps are recommended?"
+    submitted_prompt = render_assistant_faq_grid("offline_ai")
 
     st.markdown("---")
     for msg in st.session_state["assistant_chat_history"]:

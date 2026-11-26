@@ -1549,6 +1549,40 @@ def render_3d_ai_neural_core(
     components.html(html_doc, height=height + 8, scrolling=False)
 
 
+ASSISTANT_FAQS_PRIMARY = [
+    ("🚨 Critical incidents?", "What are the most critical incidents?"),
+    ("💥 Why is DB failing?", "Why is the database failing?"),
+    ("🌐 Affected services?", "Which services are affected?"),
+    ("🩺 Health score breakdown?", "How was the health score calculated?"),
+    ("⚡ Risk score factors?", "What factors increased the infrastructure risk score?"),
+    ("🛠️ Recovery steps?", "What recovery steps are recommended?"),
+]
+
+ASSISTANT_FAQS_EXTRA = [
+    ("🧠 Memory & OOM logs?", "Find logs related to memory exhaustion."),
+    ("📑 Supporting evidence?", "Show the evidence supporting this suspected root cause."),
+    ("🛡️ Test anti-hallucination", "What is the GPU thermal throttling temperature?"),
+]
+
+
+def render_assistant_faq_grid(key_prefix: str) -> Optional[str]:
+    """Renders clickable FAQ prompt buttons for the AI Assistant and returns the selected query."""
+    selected: Optional[str] = None
+    st.caption("💡 **Frequently Asked Questions (Click to Ask)**")
+    for row_start in (0, 3):
+        cols = st.columns(3)
+        for idx, (label, prompt_text) in enumerate(ASSISTANT_FAQS_PRIMARY[row_start : row_start + 3]):
+            if cols[idx].button(label, use_container_width=True, key=f"{key_prefix}_faq_{row_start + idx}"):
+                selected = prompt_text
+
+    with st.expander("❓ More FAQ & Verification Questions", expanded=False):
+        ex_cols = st.columns(3)
+        for idx, (label, prompt_text) in enumerate(ASSISTANT_FAQS_EXTRA):
+            if ex_cols[idx].button(label, use_container_width=True, key=f"{key_prefix}_faq_ex_{idx}"):
+                selected = prompt_text
+    return selected
+
+
 def render_stage_badge(stage_name: str, status: str) -> None:
     """Renders a compact status badge."""
     css_class = "stage-active" if status == "COMPLETED" else "stage-upcoming"

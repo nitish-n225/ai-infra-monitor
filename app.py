@@ -34,6 +34,7 @@ from src.ui.components import (
     esc,
     render_3d_ai_neural_core,
     render_3d_vector_constellation,
+    render_assistant_faq_grid,
     render_hero_header,
 )
 from src.ui.live_views import (
@@ -314,14 +315,7 @@ if data_mode == "Live Fleet":
                 height=310,
             )
 
-            pq1, pq2, pq3 = st.columns(3)
-            quick_live_prompt = None
-            if pq1.button("🚨 Critical incidents?", use_container_width=True, key="live_ai_q1"):
-                quick_live_prompt = "What are the most critical incidents?"
-            if pq2.button("🩺 Fleet health & risks?", use_container_width=True, key="live_ai_q2"):
-                quick_live_prompt = "How is the fleet health score and failure risk?"
-            if pq3.button("🛠️ Recovery steps?", use_container_width=True, key="live_ai_q3"):
-                quick_live_prompt = "What recovery steps are recommended?"
+            quick_live_prompt = render_assistant_faq_grid("live_ai")
 
             for msg in st.session_state["live_assistant_history"]:
                 with st.chat_message(msg["role"]):
