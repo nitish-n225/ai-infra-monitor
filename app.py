@@ -36,7 +36,6 @@ from src.ui.components import (
     render_3d_vector_constellation,
     render_assistant_faq_grid,
     render_hero_header,
-    render_voice_assistant_controls,
 )
 from src.ui.live_views import (
     render_fleet_admin_tab,
@@ -326,17 +325,8 @@ if data_mode == "Live Fleet":
                             for ev in msg["evidence"]:
                                 st.code(f"[{ev.get('timestamp')}] [{ev.get('service')}] [{ev.get('level')}] {ev.get('message')}")
 
-            last_live_user = next(
-                (m for m in reversed(st.session_state["live_assistant_history"]) if m.get("role") == "user"),
-                None,
-            )
-            voice_live_prompt = render_voice_assistant_controls(
-                "live_ai",
-                (last_live_ai or {}).get("content", ""),
-                (last_live_user or {}).get("content", ""),
-            )
             chat_in = st.chat_input("Ask about live incidents, root causes, or recovery...", key="live_ai_input")
-            prompt = quick_live_prompt or voice_live_prompt or chat_in
+            prompt = quick_live_prompt or chat_in
             if prompt:
                 st.session_state["live_assistant_history"].append({"role": "user", "content": prompt})
                 with st.spinner("Querying live AI engine..."):

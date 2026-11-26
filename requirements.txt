@@ -12,7 +12,6 @@ PyJWT>=2.8.0
 psycopg2-binary>=2.9.9
 websockets>=13.0
 requests>=2.31.0
-SpeechRecognition>=3.11.0
 
 # Stage 3 Dependencies (Semantic Search & Vector Indexing)
 sentence-transformers>=2.2.0
