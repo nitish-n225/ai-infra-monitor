@@ -1007,8 +1007,7 @@ def render_luxury_login_header() -> None:
                 0 0 36px -10px rgba(156, 64, 255, 0.28) !important;
             animation: motionEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-        body:has(.login-luxe-banner) [data-testid="stForm"] label,
-        body:has(.login-luxe-banner) [data-testid="stForm"] p {
+        body:has(.login-luxe-banner) [data-testid="stForm"] label {
             color: #0f172a !important;
             font-weight: 600 !important;
             font-size: 0.9rem !important;
@@ -1021,16 +1020,27 @@ def render_luxury_login_header() -> None:
             font-size: 0.94rem !important;
             padding: 0.58rem 0.78rem !important;
         }
+        body:has(.login-luxe-banner) [data-testid="stForm"] input::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
         body:has(.login-luxe-banner) [data-testid="stForm"] [data-baseweb="input"] {
             background-color: #f8fafc !important;
             border: 1px solid rgba(15, 23, 42, 0.14) !important;
             border-radius: 10px !important;
         }
+        body:has(.login-luxe-banner) [data-testid="stForm"] [data-baseweb="input"] button {
+            background: transparent !important;
+            color: #334155 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
         body:has(.login-luxe-banner) [data-testid="stForm"] input:focus {
             border-color: #6366f1 !important;
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
         }
-        body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button {
+        body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button,
+        body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button p {
             background: linear-gradient(135deg, #0f172a 0%, #312e81 55%, #4f46e5 100%) !important;
             color: #ffffff !important;
             border: 1px solid rgba(99, 102, 241, 0.45) !important;
@@ -1040,6 +1050,12 @@ def render_luxury_login_header() -> None:
             font-weight: 700 !important;
             letter-spacing: 0.01em !important;
             box-shadow: 0 12px 26px -8px rgba(79, 70, 229, 0.55) !important;
+        }
+        body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button p {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            min-height: 0 !important;
         }
         body:has(.login-luxe-banner) [data-testid="stFormSubmitButton"] button:hover {
             transform: translateY(-2px);
