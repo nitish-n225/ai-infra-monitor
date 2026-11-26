@@ -614,7 +614,7 @@ def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: 
     )
 
 
-def render_luxury_login_showcase(height: int = 395) -> None:
+def render_luxury_login_showcase(height: int = 360) -> None:
     """
     Renders a self-contained 60fps interactive 3D Orbital Security Core showcase
     for the executive split-screen login portal.
@@ -814,10 +814,10 @@ def render_luxury_login_showcase(height: int = 395) -> None:
         let t = 0;
         function draw() {{
           ctx.clearRect(0, 0, W, H);
-          if (!dragging) yaw += 0.0045;
-          t += 0.025;
-          const R = Math.min(W, H) * 0.255;
-          const centerY = H * 0.41;
+          if (!dragging) yaw += 0.0020;
+          t += 0.014;
+          const R = Math.min(W, H) * 0.215;
+          const centerY = H * 0.44;
 
           // Subtle concentric radar halos
           for (let k = 1; k <= 3; k++) {{
@@ -845,7 +845,7 @@ def render_luxury_login_showcase(height: int = 395) -> None:
             ctx.lineWidth = 1.25;
             ctx.stroke();
 
-            const satA = t * (ring === 0 ? 1.1 : -0.85) + ring * 2;
+            const satA = t * (ring === 0 ? 0.65 : -0.50) + ring * 2;
             const sp = proj3D(
               Math.cos(satA) * ringR,
               Math.sin(satA) * Math.sin(tilt) * ringR,
@@ -895,10 +895,10 @@ def render_luxury_login_header() -> None:
             position: relative;
             overflow: hidden;
             text-align: center;
-            padding: 1.65rem 1.5rem 1.45rem 1.5rem;
+            padding: 1.85rem 1.75rem 1.65rem 1.75rem;
             border-radius: 20px;
-            margin-top: 0.4rem;
-            margin-bottom: 1.05rem;
+            margin-top: 0.2rem;
+            margin-bottom: 1.15rem;
             background:
                 radial-gradient(circle at 50% -10%, rgba(156, 64, 255, 0.22), transparent 62%),
                 linear-gradient(160deg, rgba(14, 16, 28, 0.92), rgba(7, 8, 15, 0.96));
@@ -931,14 +931,14 @@ def render_luxury_login_header() -> None:
             animation: magicBorderBeamAngle 7s linear infinite;
         }
         .login-crest {
-            width: 54px;
-            height: 54px;
-            margin: 0 auto 0.85rem auto;
-            border-radius: 16px;
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 0.9rem auto;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.72rem;
             background: linear-gradient(145deg, rgba(255, 170, 64, 0.18), rgba(156, 64, 255, 0.24));
             border: 1px solid rgba(255, 255, 255, 0.20);
             box-shadow:
@@ -948,7 +948,7 @@ def render_luxury_login_header() -> None:
         .login-title {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             font-style: normal;
-            font-size: 1.48rem;
+            font-size: 1.68rem;
             font-weight: 700;
             letter-spacing: -0.02em;
             background: linear-gradient(95deg, #ffffff 0%, #ffe6b3 45%, #d8b4fe 85%);
@@ -985,7 +985,7 @@ def render_luxury_login_header() -> None:
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.90) !important;
             border-radius: 18px !important;
-            padding: 1.55rem 1.5rem 1.4rem 1.5rem !important;
+            padding: 1.85rem 1.75rem 1.7rem 1.75rem !important;
             box-shadow:
                 inset 0 1px 0 #ffffff,
                 0 28px 64px -16px rgba(0, 0, 0, 0.82),
@@ -996,13 +996,15 @@ def render_luxury_login_header() -> None:
         body:has(.login-luxe-banner) [data-testid="stForm"] p {
             color: #0f172a !important;
             font-weight: 600 !important;
-            font-size: 0.82rem !important;
+            font-size: 0.9rem !important;
         }
         body:has(.login-luxe-banner) [data-testid="stForm"] input {
             background-color: #f8fafc !important;
             color: #0f172a !important;
             border: 1px solid rgba(15, 23, 42, 0.15) !important;
             border-radius: 10px !important;
+            font-size: 0.94rem !important;
+            padding: 0.58rem 0.78rem !important;
         }
         body:has(.login-luxe-banner) [data-testid="stForm"] [data-baseweb="input"] {
             background-color: #f8fafc !important;
@@ -1018,8 +1020,8 @@ def render_luxury_login_header() -> None:
             color: #ffffff !important;
             border: 1px solid rgba(99, 102, 241, 0.45) !important;
             border-radius: 11px !important;
-            min-height: 2.55rem !important;
-            font-size: 0.88rem !important;
+            min-height: 2.85rem !important;
+            font-size: 0.95rem !important;
             font-weight: 700 !important;
             letter-spacing: 0.01em !important;
             box-shadow: 0 12px 26px -8px rgba(79, 70, 229, 0.55) !important;

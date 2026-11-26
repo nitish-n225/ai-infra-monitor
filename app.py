@@ -202,7 +202,7 @@ if data_mode == "Live Fleet":
                 st.error(f"Could not reach `{backend_url}`.")
     elif not jwt_token:
         st.markdown("<div style='height:0.65rem;'></div>", unsafe_allow_html=True)
-        col_pad_l, col_portal, col_showcase, col_pad_r = st.columns([0.12, 1.0, 1.18, 0.12], gap="large")
+        col_pad_l, col_portal, col_showcase, col_pad_r = st.columns([0.05, 1.32, 0.90, 0.05], gap="large")
         with col_portal:
             render_luxury_login_header()
             with st.form("operator_login_form"):
@@ -210,7 +210,7 @@ if data_mode == "Live Fleet":
                 p_in = st.text_input("Password", type="password", placeholder="MONITOR_ADMIN_PASSWORD or Admin Key")
                 login_btn = st.form_submit_button("🔓 Sign In", use_container_width=True, type="primary")
         with col_showcase:
-            render_luxury_login_showcase(height=395)
+            render_luxury_login_showcase(height=360)
             if login_btn:
                 with st.spinner("Signing in..."):
                     try:
