@@ -842,6 +842,382 @@ def render_3d_rca_fault_graph(
     )
 
 
+def render_3d_ai_neural_core(
+    context_label: str,
+    intent_label: str = "STANDBY",
+    confidence_label: str = "READY",
+    evidence_items: Optional[List[Dict[str, Any]]] = None,
+    signals: Optional[List[Dict[str, str]]] = None,
+    height: int = 320,
+) -> None:
+    """
+    Renders a distinct, industry-grade 3D Neural Reasoning Engine & Evidence Matrix:
+    - Left 3D plane: Grounding pipelines (Parser, RCA, FAISS, Health, Risk)
+    - Center: Rotating 3D wireframe Icosahedron + inner 3D Tesseract + 3 gyroscope rings
+    - Right 3D plane: Cited ground-truth log evidence nodes connected by neural beams
+    """
+    ev_list = []
+    for idx, ev in enumerate((evidence_items or [])[:6]):
+        sev = str(ev.get("level", "INFO")).upper()
+        svc = str(ev.get("service", "system"))
+        line_no = ev.get("line_no")
+        prefix = f"L{line_no} " if line_no else ""
+        ev_list.append({
+            "label": f"{prefix}[{svc}]"[:22],
+            "sev": sev,
+            "detail": f"[{sev}] {esc(ev.get('timestamp', 'N/A'))}<br>{esc(str(ev.get('message', ''))[:105])}",
+        })
+    if not ev_list:
+        ev_list = [
+            {"label": "Evidence Gate", "sev": "INFO", "detail": "Awaiting query — all answers strictly cite verified log lines."},
+            {"label": "Safety Guard", "sev": "INFO", "detail": "Live execution blocked; advisory dry-run playbooks only."},
+        ]
+
+    sig_list = signals or [
+        {"label": "Log Parser", "detail": "Normalized multi-format event stream"},
+        {"label": "RCA Fault Tree", "detail": "6-domain deterministic root cause classifier"},
+        {"label": "FAISS 384-d", "detail": "Vector cosine similarity retrieval"},
+        {"label": "Health & Risk", "detail": "Explainable score & trajectory weighting"},
+    ]
+
+    payload_json = json.dumps({
+        "context": context_label[:40],
+        "intent": intent_label,
+        "confidence": confidence_label,
+        "signals": sig_list[:5],
+        "evidence": ev_list,
+    }, default=str)
+
+    html_doc = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8" />
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      body {{
+        background: radial-gradient(circle at 50% 48%, #0b1633 0%, #040711 82%);
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        color: #f8fafc;
+        overflow: hidden;
+        user-select: none;
+      }}
+      .wrap {{
+        position: relative;
+        width: 100%;
+        height: {height}px;
+        border-radius: 14px;
+        border: 1px solid rgba(129, 140, 248, 0.32);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.12),
+          0 18px 40px rgba(0,0,0,0.68),
+          0 0 36px -12px rgba(34, 211, 238, 0.25);
+        overflow: hidden;
+      }}
+      canvas {{ display: block; width: 100%; height: 100%; cursor: grab; }}
+      canvas:active {{ cursor: grabbing; }}
+      .hud-top {{
+        position: absolute; top: 10px; left: 12px; right: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        pointer-events: none;
+      }}
+      .hud-title {{
+        background: rgba(6, 10, 24, 0.82);
+        border: 1px solid rgba(129, 140, 248, 0.38);
+        padding: 5px 12px; border-radius: 999px;
+        font-size: 11.5px; font-weight: 700; color: #e0e7ff;
+        letter-spacing: 0.04em;
+      }}
+      .hud-btns {{ display: flex; gap: 6px; pointer-events: auto; }}
+      .hud-btn {{
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        color: #cbd5e1; border-radius: 7px; padding: 4px 9px;
+        font-size: 11px; font-weight: 600; cursor: pointer;
+      }}
+      .hud-btn:hover {{ border-color: #818cf8; color: #fff; }}
+      .hud-bottom {{
+        position: absolute; bottom: 10px; left: 12px; right: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        pointer-events: none; font-size: 11px;
+      }}
+      .hud-chips {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+      .chip {{
+        background: rgba(6, 10, 24, 0.82);
+        border: 1px solid rgba(34, 211, 238, 0.25);
+        padding: 4px 9px; border-radius: 8px; color: #cbd5e1;
+        font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+      }}
+      .tip {{
+        position: absolute; display: none; pointer-events: none;
+        background: rgba(5, 9, 20, 0.95);
+        border: 1px solid rgba(129, 140, 248, 0.55);
+        border-radius: 10px; padding: 8px 11px;
+        font-size: 11.5px; line-height: 1.45; color: #f1f5f9;
+        box-shadow: 0 14px 30px rgba(0,0,0,0.75);
+        max-width: 260px; z-index: 12;
+      }}
+    </style>
+    </head>
+    <body>
+      <div class="wrap" id="wrap">
+        <canvas id="neural"></canvas>
+        <div class="hud-top">
+          <div class="hud-title">🧠 3D AI NEURAL REASONING ENGINE &bull; {esc(context_label[:32])}</div>
+          <div class="hud-btns">
+            <button class="hud-btn" id="pauseBtn">⏸ Freeze</button>
+            <button class="hud-btn" id="resetBtn">⟲ Reset</button>
+          </div>
+        </div>
+        <div class="hud-bottom">
+          <div class="hud-chips">
+            <span class="chip">INTENT: <strong style="color:#22d3ee;">{esc(intent_label)}</strong></span>
+            <span class="chip">CONFIDENCE: <strong style="color:#10b981;">{esc(confidence_label)}</strong></span>
+            <span class="chip">EVIDENCE: <strong>{len(evidence_items or [])}</strong></span>
+            <span class="chip" style="border-color:rgba(16,185,129,0.35);">GATE: <strong style="color:#10b981;">ADVISORY ONLY</strong></span>
+          </div>
+          <span style="color:#64748b;">Drag 3D &bull; Scroll Zoom</span>
+        </div>
+        <div class="tip" id="tip"></div>
+      </div>
+      <script>
+        const CFG = {payload_json};
+        const canvas = document.getElementById("neural");
+        const ctx = canvas.getContext("2d");
+        const wrap = document.getElementById("wrap");
+        const tip = document.getElementById("tip");
+        const escJs = (s) => String(s || "").replace(/[&<>"']/g, m => ({{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}}[m]));
+
+        let W = 800, H = {height}, dpr = window.devicePixelRatio || 1;
+        function resize() {{
+          W = wrap.clientWidth || 800;
+          H = wrap.clientHeight || {height};
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }}
+        resize();
+        window.addEventListener("resize", resize);
+
+        let yaw = 0.25, pitch = 0.18, zoom = 1.0, spinning = true;
+        let dragging = false, lx = 0, ly = 0, mx = -999, my = -999;
+        canvas.addEventListener("mousedown", e => {{ dragging = true; lx = e.clientX; ly = e.clientY; }});
+        window.addEventListener("mouseup", () => {{ dragging = false; }});
+        window.addEventListener("mousemove", e => {{
+          const r = canvas.getBoundingClientRect();
+          mx = e.clientX - r.left; my = e.clientY - r.top;
+          if (dragging) {{
+            yaw += (e.clientX - lx) * 0.007;
+            pitch = Math.max(-1.0, Math.min(1.0, pitch + (e.clientY - ly) * 0.007));
+            lx = e.clientX; ly = e.clientY;
+          }}
+        }});
+        canvas.addEventListener("wheel", e => {{
+          e.preventDefault();
+          zoom = Math.max(0.6, Math.min(1.75, zoom - e.deltaY * 0.0008));
+        }}, {{ passive: false }});
+        document.getElementById("pauseBtn").onclick = () => {{
+          spinning = !spinning;
+          document.getElementById("pauseBtn").textContent = spinning ? "⏸ Freeze" : "▶ Resume";
+        }};
+        document.getElementById("resetBtn").onclick = () => {{ yaw = 0.25; pitch = 0.18; zoom = 1.0; }};
+
+        // 3D Geodesic Icosahedron geometry
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const rawVerts = [
+          [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+          [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+          [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
+        ].map(v => {{
+          const len = Math.hypot(v[0], v[1], v[2]);
+          return [v[0] / len * 66, v[1] / len * 66, v[2] / len * 66];
+        }});
+        const icoEdges = [];
+        for (let i = 0; i < rawVerts.length; i++) {{
+          for (let j = i + 1; j < rawVerts.length; j++) {{
+            const d = Math.hypot(
+              rawVerts[i][0] - rawVerts[j][0],
+              rawVerts[i][1] - rawVerts[j][1],
+              rawVerts[i][2] - rawVerts[j][2]
+            );
+            if (d < 74) icoEdges.push([i, j]);
+          }}
+        }}
+
+        // Inner 3D cube vertices
+        const cubeVerts = [];
+        for (const sx of [-26, 26]) for (const sy of [-26, 26]) for (const sz of [-26, 26]) cubeVerts.push([sx, sy, sz]);
+        const cubeEdges = [];
+        for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) {{
+          const diff = (cubeVerts[i][0] !== cubeVerts[j][0]) + (cubeVerts[i][1] !== cubeVerts[j][1]) + (cubeVerts[i][2] !== cubeVerts[j][2]);
+          if (diff === 1) cubeEdges.push([i, j]);
+        }}
+
+        const SEV_COLOR = {{ CRITICAL: "#ef4444", FATAL: "#ef4444", ERROR: "#f97316", WARN: "#f59e0b", WARNING: "#f59e0b", INFO: "#10b981" }};
+        const coreColor = CFG.confidence === "INSUFFICIENT_EVIDENCE" ? "#f59e0b" : (CFG.evidence.some(e => e.sev === "CRITICAL") ? "#22d3ee" : "#818cf8");
+
+        // Left & Right 3D neural layer nodes
+        const sigNodes = CFG.signals.map((s, idx) => {{
+          const n = CFG.signals.length;
+          const y = (idx - (n - 1) / 2) * 46;
+          const z = Math.sin(idx * 1.4) * 45;
+          return {{ ...s, x: -205, y, z, color: "#22d3ee", side: "INPUT" }};
+        }});
+        const evNodes = CFG.evidence.map((e, idx) => {{
+          const n = CFG.evidence.length;
+          const y = (idx - (n - 1) / 2) * 44;
+          const z = Math.cos(idx * 1.3) * 48;
+          return {{ ...e, x: 205, y, z, color: SEV_COLOR[e.sev] || "#10b981", side: "EVIDENCE" }};
+        }});
+
+        function proj(x, y, z, extraYaw = 0, extraPitch = 0) {{
+          const cy = Math.cos(yaw + extraYaw), sy = Math.sin(yaw + extraYaw);
+          const cp = Math.cos(pitch + extraPitch), sp = Math.sin(pitch + extraPitch);
+          const x1 = x * cy - z * sy;
+          const z1 = x * sy + z * cy;
+          const y2 = y * cp - z1 * sp;
+          const z2 = y * sp + z1 * cp;
+          const fov = 560 * zoom;
+          const sc = fov / (fov + z2 + 240);
+          return {{ sx: W / 2 + x1 * sc, sy: H / 2 + y2 * sc, sc, z: z2 }};
+        }}
+
+        function drawDiamond(sx, sy, r, color) {{
+          ctx.beginPath();
+          ctx.moveTo(sx, sy - r);
+          ctx.lineTo(sx + r * 0.85, sy);
+          ctx.lineTo(sx, sy + r);
+          ctx.lineTo(sx - r * 0.85, sy);
+          ctx.closePath();
+          const g = ctx.createLinearGradient(sx - r, sy - r, sx + r, sy + r);
+          g.addColorStop(0, "#ffffff");
+          g.addColorStop(0.35, color);
+          g.addColorStop(1, "#060a18");
+          ctx.fillStyle = g;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 14;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#ffffff55";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }}
+
+        let t = 0;
+        function render() {{
+          t += 0.02;
+          if (spinning && !dragging) yaw += 0.0028;
+          ctx.clearRect(0, 0, W, H);
+
+          // Perspective horizon grid
+          ctx.strokeStyle = "rgba(129, 140, 248, 0.08)";
+          ctx.lineWidth = 1;
+          for (let g = -240; g <= 240; g += 60) {{
+            const a = proj(g, 118, -180), b = proj(g, 118, 180);
+            ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+            const c = proj(-240, 118, g * 0.75), d = proj(240, 118, g * 0.75);
+            ctx.beginPath(); ctx.moveTo(c.sx, c.sy); ctx.lineTo(d.sx, d.sy); ctx.stroke();
+          }}
+
+          // Holographic 3D Gyroscope Rings around core
+          for (let ring = 0; ring < 3; ring++) {{
+            const rad = 84 + ring * 13;
+            const tiltX = ring * 0.72 + t * (ring % 2 === 0 ? 0.35 : -0.28);
+            const tiltY = ring * 1.1 - t * 0.22;
+            ctx.beginPath();
+            for (let k = 0; k <= 48; k++) {{
+              const ang = (k / 48) * Math.PI * 2;
+              const rx = Math.cos(ang) * rad;
+              const ry = Math.sin(ang) * rad * Math.cos(tiltX);
+              const rz = Math.sin(ang) * rad * Math.sin(tiltX);
+              const p = proj(rx * Math.cos(tiltY) - rz * Math.sin(tiltY), ry, rx * Math.sin(tiltY) + rz * Math.cos(tiltY));
+              if (k === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+            }}
+            ctx.strokeStyle = ring === 0 ? "rgba(34,211,238,0.28)" : (ring === 1 ? "rgba(129,140,248,0.25)" : "rgba(16,185,129,0.22)");
+            ctx.lineWidth = 1.25;
+            ctx.stroke();
+          }}
+
+          const centerP = proj(0, 0, 0);
+
+          // Neural Synapses: Inputs -> Core -> Evidence
+          const projInputs = sigNodes.map((n, i) => ({{ n, p: proj(n.x, n.y + Math.sin(t + i) * 4, n.z) }}));
+          const projEvs = evNodes.map((n, i) => ({{ n, p: proj(n.x, n.y + Math.cos(t + i) * 4, n.z) }}));
+
+          for (let i = 0; i < projInputs.length; i++) {{
+            const {{ n, p }} = projInputs[i];
+            ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(centerP.sx, centerP.sy);
+            ctx.strokeStyle = "rgba(34, 211, 238, 0.32)"; ctx.lineWidth = 1.4; ctx.stroke();
+            const f = (t * 0.65 + i * 0.23) % 1;
+            const px = p.sx + (centerP.sx - p.sx) * f, py = p.sy + (centerP.sy - p.sy) * f;
+            ctx.beginPath(); ctx.arc(px, py, 2.6, 0, Math.PI * 2);
+            ctx.fillStyle = "#67e8f9"; ctx.fill();
+          }}
+          for (let i = 0; i < projEvs.length; i++) {{
+            const {{ n, p }} = projEvs[i];
+            ctx.beginPath(); ctx.moveTo(centerP.sx, centerP.sy); ctx.lineTo(p.sx, p.sy);
+            ctx.strokeStyle = n.color + "66"; ctx.lineWidth = 1.6; ctx.stroke();
+            const f = (t * 0.65 + i * 0.19) % 1;
+            const px = centerP.sx + (p.sx - centerP.sx) * f, py = centerP.sy + (p.sy - centerP.sy) * f;
+            ctx.beginPath(); ctx.arc(px, py, 2.8, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff"; ctx.shadowColor = n.color; ctx.shadowBlur = 8; ctx.fill(); ctx.shadowBlur = 0;
+          }}
+
+          // Inner Counter-Rotating 3D Tesseract Cube
+          const cProj = cubeVerts.map(v => proj(v[0], v[1], v[2], -t * 0.9, t * 0.55));
+          ctx.strokeStyle = "rgba(34, 211, 238, 0.72)";
+          ctx.lineWidth = 1.5;
+          for (const [a, b] of cubeEdges) {{
+            ctx.beginPath(); ctx.moveTo(cProj[a].sx, cProj[a].sy); ctx.lineTo(cProj[b].sx, cProj[b].sy); ctx.stroke();
+          }}
+
+          // Outer Rotating 3D Icosahedron Neural Mesh
+          const iProj = rawVerts.map(v => proj(v[0], v[1], v[2], t * 0.55, t * 0.25));
+          ctx.strokeStyle = coreColor;
+          ctx.lineWidth = 1.6;
+          ctx.shadowColor = coreColor;
+          ctx.shadowBlur = 10;
+          for (const [a, b] of icoEdges) {{
+            ctx.beginPath(); ctx.moveTo(iProj[a].sx, iProj[a].sy); ctx.lineTo(iProj[b].sx, iProj[b].sy); ctx.stroke();
+          }}
+          ctx.shadowBlur = 0;
+          for (const vp of iProj) {{
+            ctx.beginPath(); ctx.arc(vp.sx, vp.sy, 2.6 * vp.sc, 0, Math.PI * 2);
+            ctx.fillStyle = "#e0e7ff"; ctx.fill();
+          }}
+
+          // Draw Layer Nodes + Hover Check
+          let hovered = null;
+          const allNodes = [...projInputs, ...projEvs].sort((a, b) => b.p.z - a.p.z);
+          for (const it of allNodes) {{
+            const rad = (it.n.side === "EVIDENCE" ? 13 : 11.5) * it.p.sc;
+            drawDiamond(it.p.sx, it.p.sy, rad, it.n.color);
+            ctx.fillStyle = "#e2e8f0";
+            ctx.font = "600 10.5px JetBrains Mono, monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(it.n.label, it.p.sx, it.p.sy + rad + 13);
+            if (Math.hypot(mx - it.p.sx, my - it.p.sy) <= rad + 8) hovered = it;
+          }}
+
+          if (hovered) {{
+            tip.style.display = "block";
+            tip.style.left = Math.min(W - 265, Math.max(10, hovered.p.sx + 14)) + "px";
+            tip.style.top = Math.min(H - 95, Math.max(10, hovered.p.sy - 14)) + "px";
+            tip.innerHTML = `<strong style="color:${{hovered.n.color}}">${{escJs(hovered.n.label)}}</strong><br>${{hovered.n.detail || ""}}`;
+          }} else {{
+            tip.style.display = "none";
+          }}
+
+          requestAnimationFrame(render);
+        }}
+        render();
+      </script>
+    </body>
+    </html>
+    """
+    components.html(html_doc, height=height + 8, scrolling=False)
+
+
 def render_stage_badge(stage_name: str, status: str) -> None:
     """Renders a compact status badge."""
     css_class = "stage-active" if status == "COMPLETED" else "stage-upcoming"

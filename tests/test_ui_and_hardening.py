@@ -25,6 +25,7 @@ def test_ui_modules_compile_and_escape():
         resource_bar_html,
         render_metric_card,
         render_hero_header,
+        render_3d_ai_neural_core,
         render_3d_gauge_pair,
         render_3d_rca_fault_graph,
         render_3d_topology_scene,
@@ -52,6 +53,7 @@ def test_ui_modules_compile_and_escape():
     assert "College Mini-Project" not in views_src
     assert callable(render_metric_card)
     assert callable(render_hero_header)
+    assert callable(render_3d_ai_neural_core)
     assert callable(render_3d_gauge_pair)
     assert callable(render_3d_rca_fault_graph)
     assert callable(render_3d_topology_scene)

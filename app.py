@@ -30,6 +30,7 @@ from src.telemetry import TelemetryAnalyzer
 from src.ui.components import (
     apply_custom_styles,
     esc,
+    render_3d_ai_neural_core,
     render_3d_vector_constellation,
     render_hero_header,
 )
@@ -283,6 +284,24 @@ if data_mode == "Live Fleet":
             if col_ah2.button("🗑️ Clear Chat", use_container_width=True, key="clear_live_ai"):
                 st.session_state["live_assistant_history"] = []
                 st.rerun()
+
+            last_live_ai = next(
+                (m for m in reversed(st.session_state["live_assistant_history"]) if m.get("role") == "assistant"),
+                None,
+            )
+            render_3d_ai_neural_core(
+                context_label="Live Fleet Telemetry",
+                intent_label="LIVE_FLEET_QUERY" if last_live_ai else "READY",
+                confidence_label="GROUNDED" if (last_live_ai and last_live_ai.get("evidence")) else "STANDBY",
+                evidence_items=(last_live_ai or {}).get("evidence", []),
+                signals=[
+                    {"label": "Live Agents", "detail": "Real-time Windows telemetry & Event Viewer"},
+                    {"label": "PostgreSQL DB", "detail": "Persisted deduplicated events & snapshots"},
+                    {"label": "Live FAISS", "detail": "384-dim real-time historical similarity index"},
+                    {"label": "RCA Watchdog", "detail": "Live fault-tree & trend risk engine"},
+                ],
+                height=310,
+            )
 
             pq1, pq2, pq3 = st.columns(3)
             quick_live_prompt = None

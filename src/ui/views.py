@@ -10,6 +10,7 @@ from src.sample_data import load_sample_log
 from src.self_healing import SAFETY_POLICY_DISCLAIMER, SelfHealingEngine
 from src.ui.components import (
     esc,
+    render_3d_ai_neural_core,
     render_3d_gauge_pair,
     render_3d_rca_fault_graph,
     render_3d_topology_scene,
@@ -410,6 +411,18 @@ def render_assistant_tab(
 
     if "assistant_chat_history" not in st.session_state:
         st.session_state["assistant_chat_history"] = []
+
+    last_ai_msg = next(
+        (m for m in reversed(st.session_state["assistant_chat_history"]) if m.get("role") == "assistant"),
+        None,
+    )
+    render_3d_ai_neural_core(
+        context_label=f"{active_filename} ({len(df)} logs)",
+        intent_label=(last_ai_msg or {}).get("intent", "READY"),
+        confidence_label=(last_ai_msg or {}).get("confidence", "GROUNDED"),
+        evidence_items=(last_ai_msg or {}).get("evidence", []),
+        height=310,
+    )
 
     col_q1, col_q2, col_q3 = st.columns(3)
     submitted_prompt = None
