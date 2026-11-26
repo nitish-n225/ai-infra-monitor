@@ -15,34 +15,33 @@ def esc(value: Any) -> str:
 
 
 def apply_custom_styles() -> None:
-    """Applies a bright White UI Magic UI + MotionSites Studio frosted pearl design system."""
+    """Applies a Magic UI + MotionSites dark obsidian backdrop with selective crisp white data cards and inputs where contrast is needed."""
     st.markdown(
         """
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         :root {
-            --bg-root: #ffffff;
-            --bg-surface: rgba(255, 255, 255, 0.86);
-            --bg-surface-strong: rgba(248, 250, 252, 0.96);
-            --border-subtle: rgba(15, 23, 42, 0.09);
-            --border-magic: rgba(99, 102, 241, 0.36);
-            --border-accent: rgba(14, 165, 233, 0.42);
-            --text-primary: #0f172a;
-            --text-muted: #475569;
-            --magic-amber: #f59e0b;
-            --magic-purple: #6366f1;
-            --accent-cyan: #0284c7;
-            --accent-indigo: #4f46e5;
-            --accent-emerald: #059669;
-            --accent-amber: #d97706;
-            --accent-rose: #dc2626;
+            --bg-root: #040408;
+            --bg-surface: rgba(11, 12, 20, 0.80);
+            --bg-surface-strong: rgba(7, 8, 14, 0.94);
+            --border-subtle: rgba(255, 255, 255, 0.10);
+            --border-magic: rgba(156, 64, 255, 0.45);
+            --border-accent: rgba(56, 189, 248, 0.52);
+            --text-primary: #fafafa;
+            --text-muted: #a1a1aa;
+            --magic-amber: #ffaa40;
+            --magic-purple: #9c40ff;
+            --accent-cyan: #38bdf8;
+            --accent-indigo: #a78bfa;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #ef4444;
         }
 
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             font-style: normal;
-            color: var(--text-primary);
         }
 
         /* Clean Streamlit chrome */
@@ -82,8 +81,8 @@ def apply_custom_styles() -> None:
         }
 
         @keyframes magicMeteorFall {
-            0%   { transform: rotate(215deg) translateX(0); opacity: 0.9; }
-            70%  { opacity: 0.85; }
+            0%   { transform: rotate(215deg) translateX(0); opacity: 1; }
+            70%  { opacity: 1; }
             100% { transform: rotate(215deg) translateX(-680px); opacity: 0; }
         }
 
@@ -108,32 +107,32 @@ def apply_custom_styles() -> None:
             overflow: visible !important;
         }
 
-        /* White UI Pearl Canvas + Magic UI Dot Pattern + Iridescent Light Mesh */
+        /* Dark Obsidian Spatial Mesh + Magic UI Dot Pattern Backdrop */
         .stApp {
             position: relative;
-            background-color: #ffffff;
+            background-color: #040408;
             background-image:
-                radial-gradient(ellipse 75% 48% at 14% -4%, rgba(99, 102, 241, 0.11), transparent 62%),
-                radial-gradient(ellipse 68% 48% at 88% 2%, rgba(245, 158, 11, 0.10), transparent 60%),
-                radial-gradient(ellipse 72% 52% at 50% 56%, rgba(14, 165, 233, 0.09), transparent 65%),
-                radial-gradient(rgba(15, 23, 42, 0.085) 1px, transparent 1px);
-            background-size: 130% 130%, 130% 130%, 130% 130%, 24px 24px;
-            animation: motionMeshShift 22s ease-in-out infinite;
+                radial-gradient(ellipse 74% 50% at 14% -5%, rgba(156, 64, 255, 0.22), transparent 60%),
+                radial-gradient(ellipse 68% 50% at 88% 2%, rgba(255, 170, 64, 0.16), transparent 58%),
+                radial-gradient(ellipse 72% 52% at 50% 56%, rgba(56, 189, 248, 0.13), transparent 64%),
+                radial-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1px);
+            background-size: 130% 130%, 130% 130%, 130% 130%, 26px 26px;
+            animation: motionMeshShift 20s ease-in-out infinite;
             overflow-x: hidden;
         }
 
-        /* Subtle Silk Film-Grain Texture for White UI */
+        /* Subtle Studio Film-Grain Overlay */
         .stApp::after {
             content: "";
             position: fixed;
             inset: 0;
             pointer-events: none;
             z-index: 0;
-            opacity: 0.022;
+            opacity: 0.036;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
         }
 
-        /* Light Architectural Perspective Retro Grid Floor */
+        /* Perspective Retro Grid Floor */
         [data-testid="stAppViewContainer"] {
             position: relative;
             overflow-x: hidden;
@@ -144,21 +143,21 @@ def apply_custom_styles() -> None:
             left: -30%;
             right: -30%;
             bottom: -16%;
-            height: 66vh;
+            height: 68vh;
             pointer-events: none;
             z-index: 0;
             background-image:
-                linear-gradient(to right, rgba(99, 102, 241, 0.14) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(14, 165, 233, 0.12) 1px, transparent 1px);
+                linear-gradient(to right, rgba(156, 64, 255, 0.16) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 170, 64, 0.14) 1px, transparent 1px);
             background-size: 64px 64px;
             transform-origin: 50% 100%;
             transform: perspective(580px) rotateX(68deg);
-            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.32) 45%, transparent 78%);
-            mask-image: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.32) 45%, transparent 78%);
+            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.35) 48%, transparent 82%);
+            mask-image: linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.35) 48%, transparent 82%);
             animation: magicRetroGrid 8s linear infinite;
         }
 
-        /* Soft Pastel Ambient Aurora Halos on White */
+        /* Volumetric Aurora Halos */
         [data-testid="stAppViewContainer"]::after {
             content: "";
             position: fixed;
@@ -166,14 +165,14 @@ def apply_custom_styles() -> None:
             pointer-events: none;
             z-index: 0;
             background:
-                radial-gradient(circle at 18% 20%, rgba(129, 140, 248, 0.14) 0%, transparent 32%),
-                radial-gradient(circle at 82% 24%, rgba(251, 191, 36, 0.11) 0%, transparent 34%),
-                radial-gradient(circle at 50% 80%, rgba(56, 189, 248, 0.12) 0%, transparent 38%);
-            filter: blur(28px);
+                radial-gradient(circle at 20% 22%, rgba(156, 64, 255, 0.14) 0%, transparent 32%),
+                radial-gradient(circle at 80% 24%, rgba(255, 170, 64, 0.12) 0%, transparent 34%),
+                radial-gradient(circle at 50% 78%, rgba(56, 189, 248, 0.11) 0%, transparent 38%);
+            filter: blur(26px);
             animation: magicAurora 17s ease-in-out infinite;
         }
 
-        /* Light Mode Magic UI Meteors */
+        /* Magic UI Meteors Overlay */
         .magic-bg-layer {
             position: fixed;
             inset: 0;
@@ -187,8 +186,8 @@ def apply_custom_styles() -> None:
             width: 2px;
             height: 2px;
             border-radius: 9999px;
-            background: #6366f1;
-            box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 8px rgba(14, 165, 233, 0.45);
+            background: #e2e8f0;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 10px rgba(156, 64, 255, 0.7);
             opacity: 0;
             animation: magicMeteorFall linear infinite;
         }
@@ -199,7 +198,7 @@ def apply_custom_styles() -> None:
             transform: translateY(-50%);
             width: 68px;
             height: 1px;
-            background: linear-gradient(90deg, rgba(99, 102, 241, 0.65), rgba(14, 165, 233, 0.25), transparent);
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(156, 64, 255, 0.45), transparent);
         }
 
         .block-container {
@@ -211,54 +210,54 @@ def apply_custom_styles() -> None:
             perspective: 1600px;
         }
 
-        /* Pure White Pearl Sidebar */
+        /* Dark Obsidian Sidebar */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.96) 100%);
-            backdrop-filter: blur(22px) saturate(140%);
-            -webkit-backdrop-filter: blur(22px) saturate(140%);
-            border-right: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow: 12px 0 36px rgba(15, 23, 42, 0.06);
+            background: linear-gradient(180deg, rgba(9, 10, 16, 0.90) 0%, rgba(5, 5, 9, 0.96) 100%);
+            backdrop-filter: blur(22px) saturate(155%);
+            -webkit-backdrop-filter: blur(22px) saturate(155%);
+            border-right: 1px solid rgba(255, 255, 255, 0.10);
+            box-shadow: 16px 0 44px rgba(0, 0, 0, 0.75);
         }
 
-        /* Crisp Light Frosted Navigation Tabs */
+        /* Dark Frosted Navigation Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 0.45rem;
-            background: rgba(241, 245, 249, 0.85);
+            background: rgba(9, 10, 16, 0.84);
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             padding: 0.38rem;
             border-radius: 14px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.10);
             box-shadow:
-                inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                0 10px 26px -10px rgba(15, 23, 42, 0.08);
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 14px 32px -10px rgba(0, 0, 0, 0.72);
         }
         .stTabs [data-baseweb="tab"] {
             border-radius: 10px;
             padding: 0.48rem 1.05rem;
             font-weight: 600;
             font-size: 0.85rem;
-            color: #475569;
+            color: var(--text-muted);
             border: 1px solid transparent;
             transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .stTabs [data-baseweb="tab"]:hover {
-            color: #0f172a;
-            background: rgba(255, 255, 255, 0.65);
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
         }
         .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #ffffff, rgba(238, 242, 255, 0.96)) !important;
-            color: #312e81 !important;
-            border: 1px solid rgba(99, 102, 241, 0.38) !important;
+            background: linear-gradient(135deg, rgba(255, 170, 64, 0.18), rgba(156, 64, 255, 0.22), rgba(56, 189, 248, 0.18)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(156, 64, 255, 0.52) !important;
             box-shadow:
-                inset 0 1px 0 #ffffff,
-                0 6px 16px -4px rgba(79, 70, 229, 0.16) !important;
+                inset 0 1px 0 rgba(255, 255, 255, 0.22),
+                0 6px 20px rgba(156, 64, 255, 0.24) !important;
         }
         .stTabs [data-baseweb="tab-highlight"] {
             display: none;
         }
 
-        /* Crisp White Satin Shimmer Buttons */
+        /* Dark Satin Shimmer Buttons */
         .stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
             position: relative;
             overflow: hidden;
@@ -267,12 +266,12 @@ def apply_custom_styles() -> None:
             font-size: 0.8rem;
             padding: 0.34rem 0.78rem;
             min-height: 2.08rem;
-            color: #0f172a;
-            border: 1px solid rgba(15, 23, 42, 0.12);
-            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            color: #f4f4f5;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: linear-gradient(180deg, rgba(24, 24, 34, 0.92), rgba(10, 11, 18, 0.98));
             box-shadow:
-                inset 0 1px 0 #ffffff,
-                0 4px 12px -4px rgba(15, 23, 42, 0.10);
+                inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                0 8px 20px -6px rgba(0, 0, 0, 0.65);
             transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .stButton > button::before, .stDownloadButton > button::before, .stFormSubmitButton > button::before {
@@ -282,7 +281,7 @@ def apply_custom_styles() -> None:
             left: -120%;
             width: 55%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.16), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
             transform: skewX(-22deg);
             pointer-events: none;
         }
@@ -290,19 +289,18 @@ def apply_custom_styles() -> None:
             animation: magicShimmerBtn 0.75s ease forwards;
         }
         .stButton > button:hover, .stDownloadButton > button:hover, .stFormSubmitButton > button:hover {
-            border-color: rgba(99, 102, 241, 0.45);
-            color: #312e81;
+            border-color: rgba(156, 64, 255, 0.62);
             transform: translateY(-2px);
             box-shadow:
-                inset 0 1px 0 #ffffff,
-                0 10px 22px -6px rgba(79, 70, 229, 0.20),
-                0 0 12px -4px rgba(14, 165, 233, 0.16);
+                inset 0 1px 0 rgba(255, 255, 255, 0.24),
+                0 10px 24px -6px rgba(156, 64, 255, 0.32),
+                0 0 16px -4px rgba(255, 170, 64, 0.22);
         }
         .stButton > button:active {
             transform: translateY(0px);
         }
 
-        /* Bright White Border-Beam Hero Header */
+        /* Dark Obsidian Border-Beam Hero Header */
         .hero-header {
             position: relative;
             overflow: hidden;
@@ -311,18 +309,16 @@ def apply_custom_styles() -> None:
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            background:
-                radial-gradient(circle at 18% 0%, rgba(99, 102, 241, 0.08), transparent 55%),
-                rgba(255, 255, 255, 0.90);
-            backdrop-filter: blur(22px) saturate(140%);
-            -webkit-backdrop-filter: blur(22px) saturate(140%);
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: radial-gradient(circle at 20% 0%, rgba(156, 64, 255, 0.15), transparent 55%), rgba(9, 10, 16, 0.88);
+            backdrop-filter: blur(22px) saturate(155%);
+            -webkit-backdrop-filter: blur(22px) saturate(155%);
+            border: 1px solid rgba(255, 255, 255, 0.11);
             border-radius: 18px;
-            padding: 1.25rem 1.55rem;
+            padding: 1.2rem 1.55rem;
             margin-bottom: 1.2rem;
             box-shadow:
-                inset 0 1px 0 #ffffff,
-                0 20px 48px -16px rgba(15, 23, 42, 0.12);
+                inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                0 24px 56px -16px rgba(0, 0, 0, 0.85);
             transform-style: preserve-3d;
             animation: motionEntrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
@@ -336,13 +332,12 @@ def apply_custom_styles() -> None:
             font-size: 2.8rem;
             font-weight: 800;
             letter-spacing: 0.04em;
-            color: rgba(15, 23, 42, 0.035);
+            color: rgba(255, 255, 255, 0.032);
             white-space: nowrap;
             pointer-events: none;
             user-select: none;
             z-index: 1;
         }
-        /* Animated Magic UI Border Beam perimeter (#f59e0b -> #6366f1 -> #0ea5e9) */
         .hero-header::before {
             content: "";
             position: absolute;
@@ -352,9 +347,9 @@ def apply_custom_styles() -> None:
             background: conic-gradient(
                 from var(--magic-angle, 0deg),
                 transparent 0deg 255deg,
-                #f59e0b 292deg,
-                #6366f1 328deg,
-                #0ea5e9 352deg,
+                #ffaa40 292deg,
+                #9c40ff 328deg,
+                #38bdf8 352deg,
                 transparent 360deg
             );
             -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -369,47 +364,44 @@ def apply_custom_styles() -> None:
             font-size: 1.38rem;
             font-weight: 700;
             letter-spacing: -0.015em;
-            background: linear-gradient(95deg, #0f172a 0%, #312e81 55%, #0284c7 100%);
+            background: linear-gradient(95deg, #ffffff 0%, #ffe6b3 38%, #d8b4fe 72%, #7dd3fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin: 0;
         }
         .hero-subtitle {
             font-size: 0.84rem;
-            color: #475569;
+            color: #a1a1aa;
             margin-top: 0.22rem;
             letter-spacing: 0.005em;
         }
 
-        /* Crisp White Magic Bento Cards */
+        /* SELECTIVE WHITE UI SURFACES: Crisp Pearl White KPI, Host, Search & Remediation Cards */
         .metric-card {
             position: relative;
             overflow: hidden;
-            background:
-                radial-gradient(220px circle at 50% -20%, rgba(99, 102, 241, 0.07), transparent 70%),
-                rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(18px) saturate(135%);
-            -webkit-backdrop-filter: blur(18px) saturate(135%);
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.85);
             border-radius: 16px;
             padding: 1.05rem 1.2rem;
+            color: #0f172a;
             box-shadow:
                 inset 0 1px 0 #ffffff,
-                0 16px 36px -14px rgba(15, 23, 42, 0.10);
+                0 18px 40px -12px rgba(0, 0, 0, 0.65);
             transform-style: preserve-3d;
             animation: motionEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
         }
         .metric-card:hover {
             transform: translateY(-5px) rotateX(2deg) rotateY(-1deg);
-            border-color: rgba(99, 102, 241, 0.38);
-            background:
-                radial-gradient(260px circle at 50% 0%, rgba(99, 102, 241, 0.11), rgba(245, 158, 11, 0.06) 45%, transparent 72%),
-                rgba(255, 255, 255, 0.96);
+            border-color: rgba(99, 102, 241, 0.55);
+            background: #ffffff;
             box-shadow:
                 inset 0 1px 0 #ffffff,
-                0 22px 44px -14px rgba(15, 23, 42, 0.14),
-                0 0 24px -8px rgba(99, 102, 241, 0.20);
+                0 24px 50px -12px rgba(0, 0, 0, 0.72),
+                0 0 26px -6px rgba(156, 64, 255, 0.35);
         }
         .metric-label {
             font-size: 0.69rem;
@@ -432,26 +424,26 @@ def apply_custom_styles() -> None:
             margin-top: 0.3rem;
         }
 
-        /* White Frosted Live Stream Strip */
+        /* Selective White Live Stream Telemetry Pill */
         .stream-strip {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
             gap: 0.6rem;
-            background: rgba(255, 255, 255, 0.88);
+            background: rgba(255, 255, 255, 0.94);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(99, 102, 241, 0.20);
+            border: 1px solid rgba(255, 255, 255, 0.85);
             border-radius: 13px;
             padding: 0.64rem 1.08rem;
             margin-bottom: 1rem;
             font-size: 0.8rem;
             color: #334155;
-            box-shadow: inset 0 1px 0 #ffffff, 0 8px 22px -8px rgba(15, 23, 42, 0.08);
+            box-shadow: inset 0 1px 0 #ffffff, 0 12px 28px -8px rgba(0, 0, 0, 0.55);
         }
 
-        /* 3D Beveled Resource Progress Bar */
+        /* Resource Progress Bar (readable on white cards) */
         .res-row { margin-top: 0.38rem; }
         .res-head {
             display: flex;
@@ -464,9 +456,9 @@ def apply_custom_styles() -> None:
             width: 100%;
             height: 7px;
             border-radius: 999px;
-            background: rgba(226, 232, 240, 0.85);
+            background: rgba(226, 232, 240, 0.9);
             border: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.12);
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.14);
             overflow: hidden;
         }
         .res-fill {
@@ -488,57 +480,58 @@ def apply_custom_styles() -> None:
             font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.05em;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 12px rgba(15, 23, 42, 0.06);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 6px 16px rgba(0, 0, 0, 0.45);
         }
 
-        /* Critical Banner on White */
+        /* High-Contrast Rose-White Critical Banner */
         .critical-banner {
-            background: linear-gradient(90deg, rgba(254, 226, 226, 0.65), rgba(255, 255, 255, 0.92));
+            background: linear-gradient(90deg, #fff1f2, rgba(255, 255, 255, 0.95));
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(239, 68, 68, 0.26);
+            border: 1px solid rgba(239, 68, 68, 0.30);
             border-left: 4px solid #ef4444;
             border-radius: 13px;
             padding: 0.88rem 1.1rem;
             margin-bottom: 0.78rem;
-            box-shadow: inset 0 1px 0 #ffffff, 0 10px 24px -10px rgba(239, 68, 68, 0.14);
+            color: #0f172a;
+            box-shadow: inset 0 1px 0 #ffffff, 0 12px 28px -8px rgba(239, 68, 68, 0.28);
         }
 
-        /* Expanders, Chat Bubbles & DataFrames on White */
+        /* Dark Expanders & Chat Bubbles */
         [data-testid="stExpander"] {
-            background: rgba(255, 255, 255, 0.88);
+            background: rgba(10, 11, 18, 0.82);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(15, 23, 42, 0.09) !important;
+            border: 1px solid var(--border-subtle) !important;
             border-radius: 13px !important;
-            box-shadow: inset 0 1px 0 #ffffff, 0 10px 24px -12px rgba(15, 23, 42, 0.08);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 28px -12px rgba(0, 0, 0, 0.65);
         }
         [data-testid="stChatMessage"] {
-            background: rgba(255, 255, 255, 0.90);
+            background: linear-gradient(145deg, rgba(16, 17, 26, 0.82), rgba(8, 9, 15, 0.90));
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(15, 23, 42, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.09);
             border-radius: 14px;
             padding: 0.8rem 1rem;
             margin-bottom: 0.55rem;
-            box-shadow: inset 0 1px 0 #ffffff, 0 10px 24px -12px rgba(15, 23, 42, 0.09);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 26px -10px rgba(0, 0, 0, 0.58);
         }
 
-        /* Compact White Frosted Command Chat Input */
+        /* Crisp White Command Input Capsule */
         [data-testid="stChatInput"] {
             max-width: 760px;
             margin: 0.4rem auto 0.3rem auto;
         }
         [data-testid="stChatInput"] > div {
             border-radius: 13px !important;
-            border: 1px solid rgba(99, 102, 241, 0.34) !important;
-            background: rgba(255, 255, 255, 0.94) !important;
-            backdrop-filter: blur(18px) saturate(140%);
-            -webkit-backdrop-filter: blur(18px) saturate(140%);
+            border: 1px solid rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
             box-shadow:
                 inset 0 1px 0 #ffffff,
-                0 12px 28px -8px rgba(15, 23, 42, 0.12),
-                0 0 20px -8px rgba(99, 102, 241, 0.18);
+                0 12px 32px rgba(0, 0, 0, 0.55),
+                0 0 22px -6px rgba(156, 64, 255, 0.30);
         }
         [data-testid="stChatInputTextArea"] {
             min-height: 2.2rem !important;
@@ -546,6 +539,9 @@ def apply_custom_styles() -> None:
             padding-bottom: 0.38rem !important;
             font-size: 0.86rem !important;
             color: #0f172a !important;
+        }
+        [data-testid="stChatInputTextArea"]::placeholder {
+            color: #64748b !important;
         }
 
         /* Stage Badges (compatibility) */
@@ -559,14 +555,14 @@ def apply_custom_styles() -> None:
             font-weight: 600;
         }
         .stage-active {
-            background: rgba(16, 185, 129, 0.12);
-            color: #059669;
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
             border: 1px solid rgba(16, 185, 129, 0.3);
         }
         .stage-upcoming {
-            background: rgba(148, 163, 184, 0.12);
-            color: #475569;
-            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(148, 163, 184, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.2);
         }
         </style>
         <div class="magic-bg-layer" aria-hidden="true">
@@ -583,9 +579,9 @@ def apply_custom_styles() -> None:
 
 
 def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: bool) -> None:
-    """Renders the White UI Border-Beam command-center header without any eyebrow line."""
-    pill_fg = "#059669" if status_ok else "#d97706"
-    pill_bg = "rgba(16, 185, 129, 0.10)" if status_ok else "rgba(245, 158, 11, 0.12)"
+    """Renders the dark Magic UI Border-Beam command-center header."""
+    pill_fg = "#10b981" if status_ok else "#f59e0b"
+    pill_bg = "rgba(16, 185, 129, 0.15)" if status_ok else "rgba(245, 158, 11, 0.15)"
     st.markdown(
         f"""
         <div class="hero-header">
@@ -595,7 +591,7 @@ def render_hero_header(title: str, subtitle: str, status_label: str, status_ok: 
                 <div class="hero-subtitle">{esc(subtitle)}</div>
             </div>
             <div style="position:relative; z-index:2;">
-                <span class="status-pill" style="color:{pill_fg}; background:{pill_bg}; border:1px solid {pill_fg}55;">
+                <span class="status-pill" style="color:{pill_fg}; background:{pill_bg}; border:1px solid {pill_fg}66;">
                     <span>●</span> {esc(status_label)}
                 </span>
             </div>
