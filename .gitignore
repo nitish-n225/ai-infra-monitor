@@ -26,3 +26,9 @@ dist/
 build/
 *.spec
 
+# Downloaded Raw Kaggle Dataset Archives & Local Export Zips
+KAGGLE/
+data/kaggle/
+ai-infra-monitor-portable.zip
+
+

@@ -359,6 +359,14 @@ class BackendAPIClient:
         r.raise_for_status()
         return r.json()
 
+    def get_ml_model_info(self) -> Optional[Dict[str, Any]]:
+        try:
+            r = requests.get(f"{self.base_url}/api/v1/ai/ml-model", headers=self._auth_headers(), timeout=5)
+            r.raise_for_status()
+            return r.json()
+        except Exception:
+            return None
+
     def get_audit_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         r = requests.get(f"{self.base_url}/api/v1/audit-logs", headers=self._auth_headers(), params={"limit": limit}, timeout=4)
         r.raise_for_status()

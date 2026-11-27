@@ -546,13 +546,27 @@ def semantic_search(req: SemanticSearchRequest, actor: str = Depends(require_adm
         query=req.query,
         top_k=req.top_k,
         device_id=req.device_id,
-        min_similarity=0.1,
+        min_similarity=0.22,
     )
 
 
 @app.post("/api/v1/assistant/query")
 def assistant_query(req: AssistantQueryRequest, actor: str = Depends(require_admin)) -> Dict[str, Any]:
     return ai_processor.query_assistant(query=req.query, device_id=req.device_id)
+
+
+@app.get("/api/v1/ai/ml-model")
+def get_ml_model_status(actor: str = Depends(require_admin)) -> Dict[str, Any]:
+    from src.ml_log_anomaly import LogAnomalyScorer
+
+    bundle = LogAnomalyScorer.load_bundle()
+    metrics = LogAnomalyScorer.load_evaluation_metrics()
+    return {
+        "model_loaded": bundle is not None,
+        "dataset": (bundle or {}).get("dataset"),
+        "primary_model_name": (bundle or {}).get("primary_model_name"),
+        "evaluation": metrics,
+    }
 
 
 @app.get("/api/v1/audit-logs")

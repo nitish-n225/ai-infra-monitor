@@ -13,9 +13,11 @@ psycopg2-binary>=2.9.9
 websockets>=13.0
 requests>=2.31.0
 
-# Stage 3 Dependencies (Semantic Search & Vector Indexing)
+# Stage 3 & ML Anomaly Detection Dependencies
 sentence-transformers>=2.2.0
 faiss-cpu>=1.7.4
+scikit-learn>=1.3.0
+joblib>=1.3.0
 
 # Windows Monitoring Agent Dependencies
 psutil>=5.9.8

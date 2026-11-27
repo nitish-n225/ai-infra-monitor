@@ -369,7 +369,7 @@ class PersistentLiveVectorStore:
                 raw_sim = float(dist)
                 if raw_sim < min_similarity:
                     continue
-                sim_pct = round(max(0.0, min(1.0, (raw_sim + 1.0) / 2.0)) * 100, 1)
+                sim_pct = round(max(0.0, min(1.0, raw_sim)) * 100, 1)
                 results.append({
                     "rank": len(results) + 1,
                     "similarity_score": round(raw_sim, 4),
@@ -532,6 +532,12 @@ class LiveAIProcessor:
         health_data = InfrastructureHealthScorer.calculate_health(df)
         rca_results = RootCauseAnalysisEngine.analyze_logs(df)
         risk_data = PredictiveFailureDetector.assess_risk(df, rca_results)
+
+        try:
+            from src.ml_log_anomaly import LogAnomalyScorer
+            ml_analysis = LogAnomalyScorer.score_parsed_logs(df)
+        except Exception:
+            ml_analysis = {"available": False, "flagged_events": 0, "max_anomaly_prob": 0.0}
 
         tel_history = get_telemetry_history(device["device_id"], limit=20)
         trend_forecast = compute_hardware_trend_forecast(tel_history)
@@ -709,6 +715,7 @@ class LiveAIProcessor:
             "risk_score": risk_score,
             "risk_level": risk_level,
             "trend_forecast": trend_forecast,
+            "ml_anomaly": ml_analysis,
             "incidents": created_or_updated,
             "newly_created_incidents": newly_created,
         }

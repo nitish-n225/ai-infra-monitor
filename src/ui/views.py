@@ -1,11 +1,12 @@
 """
 Clean Static / Uploaded Log Analyzer Views for Enterprise AI Infrastructure Monitor.
 """
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import pandas as pd
 import streamlit as st
 
 from config import SEVERITY_COLORS
+from src.ml_log_anomaly import LogAnomalyScorer
 from src.sample_data import load_sample_log
 from src.self_healing import SAFETY_POLICY_DISCLAIMER, SelfHealingEngine
 from src.ui.components import (
@@ -25,10 +26,15 @@ def render_overview_tab(
     df: pd.DataFrame,
     health_data: Dict[str, Any] = None,
     risk_data: Dict[str, Any] = None,
+    ml_analysis: Optional[Dict[str, Any]] = None,
+    active_filename: Optional[str] = None,
 ):
     """Renders the static log telemetry and operational health overview."""
-    col1, col2, col3, col4 = st.columns(4)
     total_logs = telemetry.get("total_logs", 0)
+    if active_filename and not df.empty:
+        st.caption(f"📄 Active Log Trace: `{active_filename}` • `{total_logs:,}` parsed events")
+
+    col1, col2, col3, col4 = st.columns(4)
     crit_count = telemetry.get("critical_count", 0) + telemetry.get("error_count", 0)
     services_count = telemetry.get("unique_services_count", 0)
 
@@ -55,9 +61,16 @@ def render_overview_tab(
     with col4:
         render_metric_card("Services", f"{services_count}", "Active components", "#22d3ee", accent="#22d3ee")
 
-    if not df.empty:
-        st.markdown("")
-        render_3d_gauge_pair(health_score, health_cond, risk_score, risk_level)
+    if not df.empty and ml_analysis and ml_analysis.get("available"):
+        ml_flag = int(ml_analysis.get("flagged_events", 0))
+        ml_eval = int(ml_analysis.get("evaluated_rows", 0))
+        ml_peak = float(ml_analysis.get("max_anomaly_prob", 0.0))
+        ml_mean = float(ml_analysis.get("mean_anomaly_prob", 0.0))
+        st.caption(
+            f"🧠 **ML Log Anomaly Detector** (Kaggle HDFS_v1 Text Model): "
+            f"**{ml_flag}** flagged out of `{ml_eval}` evaluated logs • "
+            f"Peak Probability: `{ml_peak:.1f}%` • Mean: `{ml_mean:.1f}%`"
+        )
 
     st.markdown("---")
     st.markdown("#### 🌐 3D Infrastructure Service Topology")
@@ -82,26 +95,35 @@ def render_overview_tab(
             height=350,
         )
 
-        service_cols = st.columns(min(len(telemetry["services"]), 4) or 1)
-        for idx, (svc_name, count) in enumerate(telemetry["service_counts"].items()):
-            with service_cols[idx % len(service_cols)]:
-                svc_errors = df[(df["service"] == svc_name) & (df["level"].isin(["CRITICAL", "FATAL", "ERROR"]))].shape[0]
-                status_color = "#ef4444" if svc_errors > 0 else "#10b981"
-                status_text = f"⚠️ {svc_errors} Errors" if svc_errors > 0 else "● Healthy"
-                st.markdown(
-                    f"""
-                    <div class="metric-card" style="margin-bottom:0.75rem;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="color:#0f172a; font-size:0.9rem;">{esc(svc_name)}</strong>
-                            <span style="font-size:0.74rem; color:{status_color}; font-weight:700;">{esc(status_text)}</span>
+        with st.expander(f"🗂️ Component Status Breakdown ({len(telemetry['service_counts'])} services)", expanded=False):
+            service_cols = st.columns(min(len(telemetry["services"]), 4) or 1)
+            for idx, (svc_name, count) in enumerate(telemetry["service_counts"].items()):
+                with service_cols[idx % len(service_cols)]:
+                    svc_crit = int(df[(df["service"] == svc_name) & (df["level"].isin(["CRITICAL", "FATAL"]))].shape[0])
+                    svc_err = int(df[(df["service"] == svc_name) & (df["level"] == "ERROR")].shape[0])
+                    svc_warn = int(df[(df["service"] == svc_name) & (df["level"].isin(["WARN", "WARNING"]))].shape[0])
+                    if svc_crit > 0:
+                        status_color, status_text = "#ef4444", f"🚨 {svc_crit} Critical" + (f", {svc_err} Err" if svc_err else "")
+                    elif svc_err > 0:
+                        status_color, status_text = "#f97316", f"⚠️ {svc_err} Errors"
+                    elif svc_warn > 0:
+                        status_color, status_text = "#f59e0b", f"⚡ {svc_warn} Warnings"
+                    else:
+                        status_color, status_text = "#10b981", "● Healthy"
+                    st.markdown(
+                        f"""
+                        <div class="metric-card" style="margin-bottom:0.75rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:#0f172a; font-size:0.9rem;">{esc(svc_name)}</strong>
+                                <span style="font-size:0.74rem; color:{status_color}; font-weight:700;">{esc(status_text)}</span>
+                            </div>
+                            <div style="font-size:0.74rem; color:#475569; margin-top:0.35rem;">{esc(count)} log events</div>
                         </div>
-                        <div style="font-size:0.74rem; color:#475569; margin-top:0.35rem;">{esc(count)} log events</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        """,
+                        unsafe_allow_html=True,
+                    )
     else:
-        st.info("Upload a log file or load a sample dataset in **📥 Upload Logs** to inspect telemetry.")
+        st.info("Upload a log file or load a sample dataset in **Log Intelligence → 📥 Upload Logs & Kaggle** to inspect telemetry.")
 
     st.markdown("---")
     col_chart1, col_chart2 = st.columns(2)
@@ -140,7 +162,57 @@ def render_overview_tab(
             )
 
 
-def render_rca_tab(rca_results: Dict[str, Any], risk_data: Dict[str, Any], health_data: Dict[str, Any], df: pd.DataFrame):
+def _render_ml_benchmark_section(ml_analysis: Optional[Dict[str, Any]] = None):
+    """Displays active-dataset ML anomaly flags and held-out Kaggle HDFS_v1 benchmark metrics."""
+    metrics_doc = LogAnomalyScorer.load_evaluation_metrics()
+    if not (ml_analysis and ml_analysis.get("available")) and not metrics_doc:
+        return
+
+    st.markdown("---")
+    st.markdown("#### 🧠 Kaggle-Trained ML Log Anomaly Detector (HDFS_v1)")
+    if ml_analysis and ml_analysis.get("available"):
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("ML Prediction", ml_analysis.get("prediction", "NORMAL"))
+        m2.metric("Flagged Events", f"{ml_analysis.get('flagged_events', 0)} / {ml_analysis.get('evaluated_rows', 0)}")
+        m3.metric("Peak Anomaly Prob", f"{ml_analysis.get('max_anomaly_prob', 0.0):.1f}%")
+        m4.metric("Tuned Threshold", f"{ml_analysis.get('threshold_pct', 50.0):.1f}%")
+        if ml_analysis.get("flagged_samples"):
+            with st.expander(f"🔎 Top ML-Flagged Log Lines ({len(ml_analysis['flagged_samples'])})", expanded=False):
+                st.dataframe(pd.DataFrame(ml_analysis["flagged_samples"]), use_container_width=True, hide_index=True)
+
+    if metrics_doc:
+        ds = metrics_doc.get("dataset", {})
+        sp = metrics_doc.get("splits", {})
+        with st.expander("📊 Kaggle HDFS_v1 Training, Leak-Free Splits & Test Evaluation Benchmark", expanded=False):
+            st.caption(
+                f"Dataset: **{ds.get('name', 'HDFS_v1')}** (`{ds.get('license', 'Apache 2.0')}`) • "
+                f"Total blocks: `{ds.get('total_blocks', 0):,}` (`{ds.get('anomaly_rate_pct', 0)}%` anomalies) • "
+                f"Train `{sp.get('train', {}).get('rows', 0):,}` / Val `{sp.get('val', {}).get('rows', 0):,}` / "
+                f"Test `{sp.get('test', {}).get('rows', 0):,}` • Sequence overlap across splits: `0`"
+            )
+            rows = []
+            for model_key, info in metrics_doc.get("models", {}).items():
+                tm = info.get("test_metrics", {})
+                cm = tm.get("confusion_matrix", {})
+                rows.append({
+                    "Model / Baseline": model_key,
+                    "Accuracy": f"{tm.get('accuracy', 0):.4f}",
+                    "Precision": f"{tm.get('precision', 0):.4f}",
+                    "Recall": f"{tm.get('recall', 0):.4f}",
+                    "F1-Score": f"{tm.get('f1_score', 0):.4f}",
+                    "Confusion Matrix [TN, FP; FN, TP]": f"[[{cm.get('tn', 0)}, {cm.get('fp', 0)}], [{cm.get('fn', 0)}, {cm.get('tp', 0)}]]",
+                })
+            if rows:
+                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
+def render_rca_tab(
+    rca_results: Dict[str, Any],
+    risk_data: Dict[str, Any],
+    health_data: Dict[str, Any],
+    df: pd.DataFrame,
+    ml_analysis: Optional[Dict[str, Any]] = None,
+):
     """Renders 3D Health/Risk gauges, 3D RCA Fault Graph, Root Cause Analysis, and Playbooks."""
     risk_score = risk_data.get("risk_score", 0.0)
     render_3d_gauge_pair(
@@ -239,6 +311,8 @@ def render_rca_tab(rca_results: Dict[str, Any], risk_data: Dict[str, Any], healt
                 sim_result = SelfHealingEngine.simulate_action(r["action_id"])
                 st.success(f"**{sim_result['message']}** (`{sim_result['simulation_mode']}`)")
 
+    _render_ml_benchmark_section(ml_analysis)
+
 
 def render_semantic_search_tab(vector_store, df: pd.DataFrame):
     """Renders clean Semantic Vector Search with automatic lightweight fallback."""
@@ -264,7 +338,7 @@ def render_semantic_search_tab(vector_store, df: pd.DataFrame):
                 with st.spinner("Generating 384-dim log vectors..."):
                     try:
                         embeddings, records, mode_used = LogEmbeddingEngine.embed_logs_with_fallback(df)
-                        vector_store.build_index(embeddings, records)
+                        vector_store.build_index(embeddings, records, embedding_mode=mode_used)
                         st.session_state["vector_store_indexed_file"] = st.session_state.get("active_file_name", "unknown")
                         st.session_state["vector_store_mode"] = mode_used
                         st.rerun()
@@ -272,39 +346,31 @@ def render_semantic_search_tab(vector_store, df: pd.DataFrame):
                         st.error(f"Vector indexing failed: {e}")
 
     st.markdown("---")
-    col_q1, col_q2, col_q3, col_q4, col_q5 = st.columns(5)
-    preset_query = None
-    if col_q1.button("💥 DB Pool", use_container_width=True):
-        preset_query = "database connection failure and slots"
-    if col_q2.button("🧠 Out of Memory", use_container_width=True):
-        preset_query = "out of memory container crash OOM"
-    if col_q3.button("🌐 Gateway Timeout", use_container_width=True):
-        preset_query = "upstream gateway timeout and latency"
-    if col_q4.button("⚡ CPU Saturation", use_container_width=True):
-        preset_query = "high CPU utilization compute load"
-    if col_q5.button("🔒 Auth Failure", use_container_width=True):
-        preset_query = "token verification timeout unauthorized"
-
-    col_s1, col_s2 = st.columns([3, 1])
-    default_query_text = preset_query or st.session_state.get("last_semantic_query", "database connection pool exhausted")
+    col_s1, col_sbtn, col_s2 = st.columns([4.2, 1.1, 1.1], vertical_alignment="bottom")
+    default_query_text = st.session_state.get("last_semantic_query", "")
     user_query = col_s1.text_input(
-        "Semantic Query",
+        "🔍 Natural Language Search",
         value=default_query_text,
-        placeholder="e.g. database pool exhausted, high memory pressure...",
+        placeholder="🔍 Search logs by meaning (e.g. database overloaded, memory limit)...",
+        key="offline_semantic_query_input",
     )
-    top_k = col_s2.slider("Top-K", min_value=1, max_value=20, value=5, key="semantic_top_k_slider")
+    col_sbtn.button("🔍 Search", use_container_width=True, type="primary", key="offline_semantic_search_btn")
+    top_k = col_s2.number_input("Results", min_value=1, max_value=20, value=5, step=1, key="semantic_top_k_slider")
 
-    if total_indexed > 0 and user_query:
-        st.session_state["last_semantic_query"] = user_query
-        search_res = vector_store.search(user_query, top_k=top_k)
-        st.caption(f"Matched **{search_res['total_matches']}** log events for `'{user_query}'`.")
-        if search_res["results"]:
-            render_3d_vector_constellation(user_query, search_res["results"])
+    if total_indexed > 0 and user_query.strip():
+        clean_q = user_query.strip()
+        st.session_state["last_semantic_query"] = clean_q
+        search_res = vector_store.search(clean_q, top_k=int(top_k), min_similarity=0.22)
+        st.caption(f"Matched **{search_res['total_matches']}** relevant log events for `'{clean_q}'` (out of {total_indexed} indexed).")
+        if not search_res["results"]:
+            st.info("No log events met the semantic relevance threshold (22%) for this query.")
+        else:
+            render_3d_vector_constellation(clean_q, search_res["results"])
         for item in search_res["results"]:
             sev = item.get("level", "INFO")
             sev_color = SEVERITY_COLORS.get(sev, "#94a3b8")
             score_pct = item["similarity_pct"]
-            score_color = "#10b981" if score_pct >= 70 else ("#22d3ee" if score_pct >= 50 else "#94a3b8")
+            score_color = "#10b981" if score_pct >= 45 else ("#22d3ee" if score_pct >= 25 else "#94a3b8")
             st.markdown(
                 f"""
                 <div class="metric-card" style="margin-bottom:0.7rem; border-left:4px solid {score_color};">

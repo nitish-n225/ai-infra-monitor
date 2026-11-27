@@ -13,6 +13,7 @@ SIMILARITY_DISCLAIMER = (
     "or identical operational failure."
 )
 
+
 class FaissVectorStore:
     """
     Manages an in-memory FAISS CPU vector index with exact 1-to-1 position-to-metadata mapping.
@@ -24,11 +25,13 @@ class FaissVectorStore:
         self.index = None
         self._numpy_vectors: Optional[np.ndarray] = None
         self.metadata_records: List[Dict[str, Any]] = []
+        self.embedding_mode: Optional[str] = None
 
     def build_index(
         self,
         embeddings: np.ndarray,
-        records: List[Dict[str, Any]]
+        records: List[Dict[str, Any]],
+        embedding_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Builds a new FAISS CPU IndexFlatIP index (with NumPy fallback if FAISS is unavailable).
@@ -36,6 +39,7 @@ class FaissVectorStore:
         Parameters:
             embeddings: Float32 numpy array of shape (N, dimension).
             records: List of original log record dicts matching embeddings order.
+            embedding_mode: Optional embedding mode identifier used to encode vectors.
 
         Returns:
             Status summary dictionary.
@@ -48,7 +52,7 @@ class FaissVectorStore:
                 "status": "EMPTY_INPUT",
                 "indexed_count": 0,
                 "dimension": self.dimension,
-                "message": "Zero log records provided; vector index was not initialized."
+                "message": "Zero log records provided; vector index was not initialized.",
             }
 
         # Validate dimensional alignment
@@ -66,6 +70,7 @@ class FaissVectorStore:
         vectors = np.ascontiguousarray(embeddings, dtype=np.float32)
         self._numpy_vectors = vectors
         self.metadata_records = list(records)
+        self.embedding_mode = embedding_mode
 
         try:
             import faiss
@@ -80,21 +85,21 @@ class FaissVectorStore:
             "status": "INDEX_BUILT",
             "indexed_count": indexed_count,
             "dimension": self.dimension,
-            "message": f"Successfully indexed {indexed_count} log vectors."
+            "message": f"Successfully indexed {indexed_count} log vectors.",
         }
 
     def search(
         self,
         query: str,
         top_k: int = DEFAULT_TOP_K,
-        min_similarity: Optional[float] = None
+        min_similarity: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Executes a semantic similarity search across indexed log vectors using a natural language query.
 
         Parameters:
             query: Natural language query string.
-            top_k: Number of most similar log events to return.
+            top_k: Maximum number of most similar log events to return.
             min_similarity: Optional minimum cosine similarity threshold (range -1.0 to 1.0).
 
         Returns:
@@ -108,7 +113,7 @@ class FaissVectorStore:
                 "total_matches": 0,
                 "results": [],
                 "disclaimer": SIMILARITY_DISCLAIMER,
-                "message": "Please enter a non-empty search query."
+                "message": "Please enter a non-empty search query.",
             }
 
         total_vectors = self.index.ntotal if self.index is not None else (
@@ -121,14 +126,18 @@ class FaissVectorStore:
                 "total_matches": 0,
                 "results": [],
                 "disclaimer": SIMILARITY_DISCLAIMER,
-                "message": "The vector index is empty. Please load or upload logs first."
+                "message": "The vector index is empty. Please load or upload logs first.",
             }
 
-        # Convert query to normalized vector (falls back safely if SentenceTransformer fails)
-        try:
-            query_vec = LogEmbeddingEngine.embed_query(clean_query)
-        except Exception:
-            query_vec = LogEmbeddingEngine.embed_query_with_fallback(clean_query)
+        # Convert query to normalized vector matching the index embedding space
+        if self.embedding_mode and "lightweight" in self.embedding_mode:
+            from src.embedding_engine import lightweight_384_embed
+            query_vec = lightweight_384_embed([clean_query])
+        else:
+            try:
+                query_vec = LogEmbeddingEngine.embed_query(clean_query)
+            except Exception:
+                query_vec = LogEmbeddingEngine.embed_query_with_fallback(clean_query)
         if query_vec is None:
             return {
                 "query": clean_query,
@@ -136,7 +145,7 @@ class FaissVectorStore:
                 "total_matches": 0,
                 "results": [],
                 "disclaimer": SIMILARITY_DISCLAIMER,
-                "message": "Failed to generate vector embedding for the query."
+                "message": "Failed to generate vector embedding for the query.",
             }
 
         # Clamp top_k within valid index bounds
@@ -154,19 +163,19 @@ class FaissVectorStore:
             top_distances = scores[order]
 
         results = []
-        for rank, (idx, dist) in enumerate(zip(top_indices, top_distances), start=1):
+        for idx, dist in zip(top_indices, top_distances):
             if idx == -1 or idx >= len(self.metadata_records):
                 continue
 
             raw_similarity = float(dist)
-            # Inner Product on normalized vectors is cosine similarity (-1.0 to 1.0)
-            # Map into positive percentage (0 to 100%) for intuitive human presentation
-            similarity_pct = round(max(0.0, min(1.0, (raw_similarity + 1.0) / 2.0)) * 100, 1)
+            # Inner Product on L2-normalized vectors is cosine similarity (-1.0 to 1.0);
+            # clamp positive range [0, 1] -> [0%, 100%] so orthogonal 0.0 cosine reads as 0.0%, not 50%
+            similarity_pct = round(max(0.0, min(1.0, raw_similarity)) * 100, 1)
 
             if min_similarity is None or raw_similarity >= min_similarity:
                 rec = self.metadata_records[idx]
                 results.append({
-                    "rank": rank,
+                    "rank": len(results) + 1,
                     "similarity_score": round(raw_similarity, 4),
                     "similarity_pct": similarity_pct,
                     "line_no": rec.get("line_no", 0),
@@ -174,7 +183,7 @@ class FaissVectorStore:
                     "service": rec.get("service", "unknown"),
                     "level": rec.get("level", "INFO"),
                     "message": rec.get("message", ""),
-                    "raw_line": rec.get("raw_line", "")
+                    "raw_line": rec.get("raw_line", ""),
                 })
 
         return {
@@ -184,7 +193,7 @@ class FaissVectorStore:
             "top_k": effective_k,
             "results": results,
             "disclaimer": SIMILARITY_DISCLAIMER,
-            "message": f"Retrieved {len(results)} matching log records for query '{clean_query}'."
+            "message": f"Retrieved {len(results)} matching log records for query '{clean_query}'.",
         }
 
     def reset(self):
@@ -192,6 +201,7 @@ class FaissVectorStore:
         self.index = None
         self._numpy_vectors = None
         self.metadata_records = []
+        self.embedding_mode = None
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns diagnostic statistics about the vector store."""
@@ -204,5 +214,6 @@ class FaissVectorStore:
         return {
             "is_indexed": total > 0,
             "total_vectors": total,
-            "dimension": self.dimension
+            "dimension": self.dimension,
         }
+

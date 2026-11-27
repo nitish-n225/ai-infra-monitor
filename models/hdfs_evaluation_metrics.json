@@ -1,0 +1,550 @@
+{
+  "generated_utc": "2026-11-27T06:32:19.661988+00:00",
+  "elapsed_seconds": 67.23,
+  "dataset": {
+    "name": "HDFS_v1 LogHub Dataset Archive",
+    "kaggle_url": "https://www.kaggle.com/datasets/tamaniwilliams/hdfs-v1-loghub-dataset-archive",
+    "license": "Apache 2.0",
+    "total_blocks": 575061,
+    "normal_blocks": 558223,
+    "anomaly_blocks": 16838,
+    "anomaly_rate_pct": 2.928,
+    "unique_sequences": 18373,
+    "templates_count": 29
+  },
+  "leakage_prevention": {
+    "split_method": "Stratified greedy group packing by canonical ordered sequence `Features`",
+    "dropped_columns": [
+      "BlockId",
+      "Label",
+      "Type"
+    ],
+    "train_val_seq_overlap": 0,
+    "train_test_seq_overlap": 0,
+    "val_test_seq_overlap": 0
+  },
+  "splits": {
+    "train": {
+      "rows": 402573,
+      "pct_rows": 70.01,
+      "anomalies": 11786,
+      "anomaly_rate_pct": 2.928,
+      "unique_sequences": 12866
+    },
+    "val": {
+      "rows": 86244,
+      "pct_rows": 15.0,
+      "anomalies": 2526,
+      "anomaly_rate_pct": 2.929,
+      "unique_sequences": 2753
+    },
+    "test": {
+      "rows": 86244,
+      "pct_rows": 15.0,
+      "anomalies": 2526,
+      "anomaly_rate_pct": 2.929,
+      "unique_sequences": 2754
+    }
+  },
+  "selected_deployed_session_model": "hist_gb_event_features",
+  "selected_deployed_text_model": "tfidf_logreg_log_text",
+  "models": {
+    "hist_gb_event_features": {
+      "feature_set": "E1..E29 counts + ratios + template signals (67 features)",
+      "tuned_threshold": 0.8059,
+      "val_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.99993,
+        "precision": 0.99763,
+        "recall": 1.0,
+        "f1_score": 0.998814,
+        "confusion_matrix": {
+          "tn": 83712,
+          "fp": 6,
+          "fn": 0,
+          "tp": 2526,
+          "matrix": [
+            [
+              83712,
+              6
+            ],
+            [
+              0,
+              2526
+            ]
+          ]
+        },
+        "roc_auc": 1.0,
+        "pr_auc": 0.99998
+      },
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.999965,
+        "precision": 0.998814,
+        "recall": 1.0,
+        "f1_score": 0.999407,
+        "confusion_matrix": {
+          "tn": 83715,
+          "fp": 3,
+          "fn": 0,
+          "tp": 2526,
+          "matrix": [
+            [
+              83715,
+              3
+            ],
+            [
+              0,
+              2526
+            ]
+          ]
+        },
+        "roc_auc": 1.0,
+        "pr_auc": 0.999989
+      },
+      "test_unique_sequence_metrics": {
+        "samples": 2754,
+        "positives": 617,
+        "negatives": 2137,
+        "accuracy": 0.998911,
+        "precision": 0.995161,
+        "recall": 1.0,
+        "f1_score": 0.997575,
+        "confusion_matrix": {
+          "tn": 2134,
+          "fp": 3,
+          "fn": 0,
+          "tp": 617,
+          "matrix": [
+            [
+              2134,
+              3
+            ],
+            [
+              0,
+              617
+            ]
+          ]
+        },
+        "roc_auc": 0.999967,
+        "pr_auc": 0.999863
+      }
+    },
+    "hist_gb_event_plus_timing": {
+      "feature_set": "E1..E29 counts/ratios/signals + Latency & TimeInterval stats (74 features)",
+      "tuned_threshold": 0.975,
+      "val_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.999954,
+        "precision": 0.998813,
+        "recall": 0.999604,
+        "f1_score": 0.999209,
+        "confusion_matrix": {
+          "tn": 83715,
+          "fp": 3,
+          "fn": 1,
+          "tp": 2525,
+          "matrix": [
+            [
+              83715,
+              3
+            ],
+            [
+              1,
+              2525
+            ]
+          ]
+        },
+        "roc_auc": 0.999999,
+        "pr_auc": 0.999979
+      },
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.999861,
+        "precision": 0.99881,
+        "recall": 0.996437,
+        "f1_score": 0.997622,
+        "confusion_matrix": {
+          "tn": 83715,
+          "fp": 3,
+          "fn": 9,
+          "tp": 2517,
+          "matrix": [
+            [
+              83715,
+              3
+            ],
+            [
+              9,
+              2517
+            ]
+          ]
+        },
+        "roc_auc": 1.0,
+        "pr_auc": 0.999984
+      },
+      "test_unique_sequence_metrics": {
+        "samples": 2754,
+        "positives": 617,
+        "negatives": 2137,
+        "accuracy": 0.996006,
+        "precision": 0.995098,
+        "recall": 0.987034,
+        "f1_score": 0.99105,
+        "confusion_matrix": {
+          "tn": 2134,
+          "fp": 3,
+          "fn": 8,
+          "tp": 609,
+          "matrix": [
+            [
+              2134,
+              3
+            ],
+            [
+              8,
+              609
+            ]
+          ]
+        },
+        "roc_auc": 0.999933,
+        "pr_auc": 0.999764
+      }
+    },
+    "random_forest_event_features": {
+      "feature_set": "E1..E29 counts + ratios + template signals (67 features)",
+      "tuned_threshold": 0.7905,
+      "val_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.999872,
+        "precision": 0.997232,
+        "recall": 0.998416,
+        "f1_score": 0.997824,
+        "confusion_matrix": {
+          "tn": 83711,
+          "fp": 7,
+          "fn": 4,
+          "tp": 2522,
+          "matrix": [
+            [
+              83711,
+              7
+            ],
+            [
+              4,
+              2522
+            ]
+          ]
+        },
+        "roc_auc": 0.999994,
+        "pr_auc": 0.999803
+      },
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.999838,
+        "precision": 0.997623,
+        "recall": 0.996833,
+        "f1_score": 0.997228,
+        "confusion_matrix": {
+          "tn": 83712,
+          "fp": 6,
+          "fn": 8,
+          "tp": 2518,
+          "matrix": [
+            [
+              83712,
+              6
+            ],
+            [
+              8,
+              2518
+            ]
+          ]
+        },
+        "roc_auc": 0.999997,
+        "pr_auc": 0.999896
+      },
+      "test_unique_sequence_metrics": {
+        "samples": 2754,
+        "positives": 617,
+        "negatives": 2137,
+        "accuracy": 0.994916,
+        "precision": 0.990244,
+        "recall": 0.987034,
+        "f1_score": 0.988636,
+        "confusion_matrix": {
+          "tn": 2131,
+          "fp": 6,
+          "fn": 8,
+          "tp": 609,
+          "matrix": [
+            [
+              2131,
+              6
+            ],
+            [
+              8,
+              609
+            ]
+          ]
+        },
+        "roc_auc": 0.999739,
+        "pr_auc": 0.998996
+      }
+    },
+    "logistic_regression_event_features": {
+      "feature_set": "StandardScaled E1..E29 + structural ratios (67 features)",
+      "tuned_threshold": 0.9204,
+      "val_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.999803,
+        "precision": 0.993315,
+        "recall": 1.0,
+        "f1_score": 0.996646,
+        "confusion_matrix": {
+          "tn": 83701,
+          "fp": 17,
+          "fn": 0,
+          "tp": 2526,
+          "matrix": [
+            [
+              83701,
+              17
+            ],
+            [
+              0,
+              2526
+            ]
+          ]
+        },
+        "roc_auc": 0.999982,
+        "pr_auc": 0.999338
+      },
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.99971,
+        "precision": 0.991742,
+        "recall": 0.998416,
+        "f1_score": 0.995068,
+        "confusion_matrix": {
+          "tn": 83697,
+          "fp": 21,
+          "fn": 4,
+          "tp": 2522,
+          "matrix": [
+            [
+              83697,
+              21
+            ],
+            [
+              4,
+              2522
+            ]
+          ]
+        },
+        "roc_auc": 0.999977,
+        "pr_auc": 0.999165
+      }
+    },
+    "tfidf_logreg_log_text": {
+      "feature_set": "TF-IDF (1-2 gram) over HDFS.log_templates log message text",
+      "tuned_threshold": 0.9761,
+      "val_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.998377,
+        "precision": 0.96821,
+        "recall": 0.976643,
+        "f1_score": 0.972408,
+        "confusion_matrix": {
+          "tn": 83637,
+          "fp": 81,
+          "fn": 59,
+          "tp": 2467,
+          "matrix": [
+            [
+              83637,
+              81
+            ],
+            [
+              59,
+              2467
+            ]
+          ]
+        },
+        "roc_auc": 0.999819,
+        "pr_auc": 0.993852
+      },
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.996939,
+        "precision": 0.966969,
+        "recall": 0.927158,
+        "f1_score": 0.946645,
+        "confusion_matrix": {
+          "tn": 83638,
+          "fp": 80,
+          "fn": 184,
+          "tp": 2342,
+          "matrix": [
+            [
+              83638,
+              80
+            ],
+            [
+              184,
+              2342
+            ]
+          ]
+        },
+        "roc_auc": 0.99961,
+        "pr_auc": 0.987745
+      }
+    },
+    "unsupervised_isolation_forest": {
+      "feature_set": "E1..E29 counts + ratios (trained on Normal-only Train split)",
+      "tuned_threshold_neg_score": -0.0565,
+      "val_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.884351,
+        "precision": 0.185473,
+        "recall": 0.869359,
+        "f1_score": 0.305722,
+        "confusion_matrix": {
+          "tn": 74074,
+          "fp": 9644,
+          "fn": 330,
+          "tp": 2196,
+          "matrix": [
+            [
+              74074,
+              9644
+            ],
+            [
+              330,
+              2196
+            ]
+          ]
+        },
+        "roc_auc": 0.90405,
+        "pr_auc": 0.154197
+      },
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.895285,
+        "precision": 0.198368,
+        "recall": 0.846793,
+        "f1_score": 0.321437,
+        "confusion_matrix": {
+          "tn": 75074,
+          "fp": 8644,
+          "fn": 387,
+          "tp": 2139,
+          "matrix": [
+            [
+              75074,
+              8644
+            ],
+            [
+              387,
+              2139
+            ]
+          ]
+        },
+        "roc_auc": 0.936025,
+        "pr_auc": 0.221622
+      }
+    },
+    "existing_rca_regex_rules": {
+      "feature_set": "Rule-based regex pattern matching on reconstructed HDFS template messages",
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.970711,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "confusion_matrix": {
+          "tn": 83718,
+          "fp": 0,
+          "fn": 2526,
+          "tp": 0,
+          "matrix": [
+            [
+              83718,
+              0
+            ],
+            [
+              2526,
+              0
+            ]
+          ]
+        },
+        "matched_event_ids": []
+      }
+    },
+    "template_keyword_rule_baseline": {
+      "feature_set": "Rule-based regex pattern matching on reconstructed HDFS template messages",
+      "test_metrics": {
+        "samples": 86244,
+        "positives": 2526,
+        "negatives": 83718,
+        "accuracy": 0.780553,
+        "precision": 0.100234,
+        "recall": 0.813935,
+        "f1_score": 0.178488,
+        "confusion_matrix": {
+          "tn": 65262,
+          "fp": 18456,
+          "fn": 470,
+          "tp": 2056,
+          "matrix": [
+            [
+              65262,
+              18456
+            ],
+            [
+              470,
+              2056
+            ]
+          ]
+        },
+        "matched_event_ids": [
+          "E10",
+          "E12",
+          "E14",
+          "E17",
+          "E20",
+          "E29",
+          "E4",
+          "E7",
+          "E8"
+        ]
+      }
+    }
+  }
+}

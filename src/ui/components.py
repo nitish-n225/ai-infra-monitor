@@ -44,11 +44,11 @@ def apply_custom_styles() -> None:
             font-style: normal;
         }
 
-        /* Hide Streamlit toolbar, GitHub icons, deploy button, manage badge & footer chrome */
+        /* Hide Streamlit action menu/toolbar buttons while preserving stToolbar & sidebar expand button */
         #MainMenu,
         footer,
+        [data-testid="stMainMenu"],
         [data-testid="stDecoration"],
-        [data-testid="stToolbar"],
         [data-testid="stToolbarActions"],
         [data-testid="stHeaderActionElements"],
         [data-testid="stAppDeployButton"],
@@ -64,8 +64,28 @@ def apply_custom_styles() -> None:
             display: none !important;
             visibility: hidden !important;
         }
-        [data-testid="stHeader"] {
+        [data-testid="stHeader"],
+        [data-testid="stToolbar"] {
             background: transparent !important;
+            visibility: visible !important;
+            z-index: 999991 !important;
+        }
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="collapsedControl"],
+        [data-testid="stSidebarCollapseButton"] {
+            display: inline-flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 999992 !important;
+        }
+        [data-testid="stExpandSidebarButton"] button,
+        [data-testid="collapsedControl"] button,
+        [data-testid="stSidebarCollapseButton"] button {
+            background: rgba(15, 23, 42, 0.90) !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(156, 64, 255, 0.55) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55) !important;
         }
 
         @property --magic-angle {
@@ -95,12 +115,6 @@ def apply_custom_styles() -> None:
             100% { --magic-angle: 360deg; }
         }
 
-        @keyframes magicMeteorFall {
-            0%   { transform: rotate(215deg) translateX(0); opacity: 1; }
-            70%  { opacity: 1; }
-            100% { transform: rotate(215deg) translateX(-680px); opacity: 0; }
-        }
-
         @keyframes magicShimmerBtn {
             0%   { left: -120%; }
             100% { left: 140%; }
@@ -110,16 +124,6 @@ def apply_custom_styles() -> None:
             0%   { background-position: 0% 20%, 100% 0%, 50% 80%, 0 0; }
             50%  { background-position: 18% 32%, 82% 14%, 46% 68%, 0 0; }
             100% { background-position: 0% 20%, 100% 0%, 50% 80%, 0 0; }
-        }
-
-        /* Hide layout footprint for fixed ambient meteor layer */
-        .stElementContainer:has(.magic-bg-layer),
-        div[data-testid="stMarkdownContainer"]:has(.magic-bg-layer) {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            overflow: visible !important;
         }
 
         /* Dark Obsidian Spatial Mesh + Magic UI Dot Pattern Backdrop */
@@ -187,35 +191,6 @@ def apply_custom_styles() -> None:
             animation: magicAurora 17s ease-in-out infinite;
         }
 
-        /* Magic UI Meteors Overlay */
-        .magic-bg-layer {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-        .magic-meteor {
-            position: absolute;
-            top: -10px;
-            width: 2px;
-            height: 2px;
-            border-radius: 9999px;
-            background: #e2e8f0;
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 10px rgba(156, 64, 255, 0.7);
-            opacity: 0;
-            animation: magicMeteorFall linear infinite;
-        }
-        .magic-meteor::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 68px;
-            height: 1px;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(156, 64, 255, 0.45), transparent);
-        }
-
         .block-container {
             position: relative;
             z-index: 1;
@@ -225,13 +200,22 @@ def apply_custom_styles() -> None:
             perspective: 1600px;
         }
 
-        /* Dark Obsidian Sidebar */
-        [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(9, 10, 16, 0.90) 0%, rgba(5, 5, 9, 0.96) 100%);
+        /* Dark Obsidian High-Contrast Sidebar */
+        [data-testid="stSidebar"],
+        [data-testid="stSidebar"] > div:first-child {
+            background: linear-gradient(180deg, rgba(10, 12, 22, 0.97) 0%, rgba(5, 6, 12, 0.99) 100%) !important;
             backdrop-filter: blur(22px) saturate(155%);
             -webkit-backdrop-filter: blur(22px) saturate(155%);
-            border-right: 1px solid rgba(255, 255, 255, 0.10);
-            box-shadow: 16px 0 44px rgba(0, 0, 0, 0.75);
+            border-right: 1px solid rgba(156, 64, 255, 0.28) !important;
+            box-shadow: 16px 0 44px rgba(0, 0, 0, 0.78);
+            z-index: 999990 !important;
+        }
+        [data-testid="stSidebar"] * {
+            color: #f1f5f9;
+        }
+        [data-testid="stSidebar"] .stCaption,
+        [data-testid="stSidebar"] small {
+            color: #cbd5e1 !important;
         }
 
         /* Dark Frosted Navigation Tabs */
@@ -593,14 +577,6 @@ def apply_custom_styles() -> None:
             border: 1px solid rgba(148, 163, 184, 0.2);
         }
         </style>
-        <div class="magic-bg-layer" aria-hidden="true">
-            <span class="magic-meteor" style="left:12%; animation-duration:4.6s; animation-delay:0.2s;"></span>
-            <span class="magic-meteor" style="left:28%; animation-duration:6.2s; animation-delay:1.8s;"></span>
-            <span class="magic-meteor" style="left:46%; animation-duration:5.1s; animation-delay:0.9s;"></span>
-            <span class="magic-meteor" style="left:64%; animation-duration:7.0s; animation-delay:2.7s;"></span>
-            <span class="magic-meteor" style="left:82%; animation-duration:4.9s; animation-delay:3.4s;"></span>
-            <span class="magic-meteor" style="left:94%; animation-duration:5.8s; animation-delay:1.1s;"></span>
-        </div>
         """,
         unsafe_allow_html=True,
     )
