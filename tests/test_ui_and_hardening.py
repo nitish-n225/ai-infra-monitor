@@ -145,6 +145,66 @@ def test_csv_and_json_array_upload_parsing():
     print("[PASS] CSV and JSON-array log upload parsing verified.")
 
 
+def test_kaggle_dataset_parsing_and_zip_extraction():
+    import io, zipfile
+    from src.parser import InfrastructureLogParser
+    from src.kaggle_loader import parse_kaggle_slug, extract_best_log_from_zip, KAGGLE_DATASETS
+
+    assert len(KAGGLE_DATASETS) >= 4
+    assert parse_kaggle_slug("https://www.kaggle.com/datasets/initialv/windows-event-log") == "initialv/windows-event-log"
+    assert parse_kaggle_slug("subashm/system-monitoring-and-security-dataset") == "subashm/system-monitoring-and-security-dataset"
+    assert parse_kaggle_slug("https://example.com/datasets/a/b") is None
+
+    # 1. Kaggle Windows Event Log schema (TimeCreated, numeric Level, Source, EventID, Message)
+    win_csv = (
+        "TimeCreated,Level,Source,EventID,Message\n"
+        "2026-11-26T10:00:01Z,2,Service Control Manager,7031,Service terminated unexpectedly\n"
+        "2026-11-26T10:00:02Z,1,Resource-Exhaustion-Detector,2004,Out of virtual memory condition\n"
+    )
+    df_win = InfrastructureLogParser.parse_text(win_csv)
+    assert len(df_win) == 2
+    assert df_win.iloc[0]["level"] == "ERROR"
+    assert df_win.iloc[1]["level"] == "CRITICAL"
+    assert df_win.iloc[0]["service"] == "Service Control Manager"
+    assert "[EventID 2004]" in df_win.iloc[1]["message"]
+
+    # 2. Kaggle LogHub structured CSV schema (LineId, Date, Time, Level, Component, Content)
+    loghub_csv = (
+        "LineId,Date,Time,Level,Component,Content\n"
+        "10,2026-11-26,10:05:00,ERROR,dfs.DataNode,Connection pool exhausted on node\n"
+    )
+    df_lh = InfrastructureLogParser.parse_text(loghub_csv)
+    assert len(df_lh) == 1
+    assert df_lh.iloc[0]["line_no"] == 10
+    assert df_lh.iloc[0]["service"] == "dfs.DataNode"
+    assert "Connection pool exhausted" in df_lh.iloc[0]["message"]
+
+    # 3. Kaggle Tabular Anomaly Telemetry CSV schema (cpu, memory, label)
+    tab_csv = (
+        "timestamp,host,cpu,memory,label\n"
+        "2026-11-26T10:10:00Z,node-01,98.5,94.2,anomaly\n"
+        "2026-11-26T10:10:05Z,node-01,24.0,45.1,normal\n"
+    )
+    df_tab = InfrastructureLogParser.parse_text(tab_csv)
+    assert len(df_tab) == 2
+    assert df_tab.iloc[0]["level"] == "CRITICAL"
+    assert df_tab.iloc[1]["level"] == "INFO"
+    assert "cpu=98.5" in df_tab.iloc[0]["message"]
+
+    # 4. Kaggle ZIP extraction & row-cap guard
+    zbuf = io.BytesIO()
+    with zipfile.ZipFile(zbuf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("readme.txt", "tiny info")
+        big_csv = "TimeCreated,Level,Source,EventID,Message\n" + "\n".join(
+            f"2026-11-26T10:00:{i%60:02d}Z,4,Kernel,100,Event line {i}" for i in range(120)
+        )
+        zf.writestr("folder/eventlog.csv", big_csv)
+    fname, extracted = extract_best_log_from_zip(zbuf.getvalue(), max_rows=50)
+    assert fname == "eventlog.csv"
+    assert len(extracted.splitlines()) == 51
+    print("[PASS] Kaggle Event Log, LogHub, Telemetry CSV schemas & ZIP extractor verified.")
+
+
 def test_assistant_broad_general_queries():
     from src.parser import InfrastructureLogParser
     from src.sample_data import load_sample_log
@@ -204,6 +264,7 @@ if __name__ == "__main__":
     test_lightweight_embedding_and_numpy_fallback()
     test_realtime_bridge_session_isolation()
     test_csv_and_json_array_upload_parsing()
+    test_kaggle_dataset_parsing_and_zip_extraction()
     test_assistant_broad_general_queries()
     print("=" * 65)
     print("[SUCCESS] All UI & enterprise hardening checks passed!")

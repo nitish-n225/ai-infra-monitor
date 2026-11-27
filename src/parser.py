@@ -135,24 +135,131 @@ class InfrastructureLogParser:
         }
 
     @staticmethod
-    def _normalize_dict_record(data: Dict[str, Any], line_no: int) -> Dict[str, Any]:
-        lowered = {str(k).strip().lower(): v for k, v in data.items()}
-        ts = lowered.get("time") or lowered.get("timestamp") or "N/A"
-        lvl = lowered.get("level") or lowered.get("severity") or "INFO"
-        svc = lowered.get("service") or lowered.get("app") or lowered.get("name") or lowered.get("host") or "unknown-service"
-        msg = lowered.get("msg") or lowered.get("message") or ""
+    def _normalize_level(raw_level: Any, message: str = "", label_val: Any = None) -> str:
+        """Normalizes string, Windows numeric (1-4), and anomaly-label levels to standard severities."""
+        lvl_str = str(raw_level).strip().upper() if raw_level not in (None, "") else ""
+        win_map = {
+            "1": "CRITICAL",
+            "CRITICAL": "CRITICAL",
+            "FATAL": "FATAL",
+            "F": "CRITICAL",
+            "2": "ERROR",
+            "ERROR": "ERROR",
+            "ERR": "ERROR",
+            "E": "ERROR",
+            "3": "WARN",
+            "WARN": "WARN",
+            "WARNING": "WARN",
+            "W": "WARN",
+            "4": "INFO",
+            "0": "INFO",
+            "INFO": "INFO",
+            "INFORMATION": "INFO",
+            "I": "INFO",
+            "DEBUG": "DEBUG",
+            "D": "DEBUG",
+        }
+        if lvl_str in win_map:
+            return win_map[lvl_str]
+
+        if label_val not in (None, ""):
+            lbl = str(label_val).strip().lower()
+            if lbl in ("1", "true", "anomaly", "attack", "malicious", "suspicious", "error", "fail", "critical"):
+                return "CRITICAL"
+            if lbl in ("0", "false", "normal", "benign", "ok", "healthy"):
+                return "INFO"
+
+        upper_msg = (message or "").upper()
+        if any(k in upper_msg for k in ("CRITICAL", "FATAL", "OOMKILLED", "EXIT CODE 137")):
+            return "CRITICAL"
+        if any(k in upper_msg for k in ("ERROR", "FAILED", "EXCEPTION", "DENIED", "TIMEOUT", "CORRUPT")):
+            return "ERROR"
+        if any(k in upper_msg for k in ("WARN", "HIGH", "LATENCY", "THROTTL")):
+            return "WARN"
+        return "INFO"
+
+    @classmethod
+    def _normalize_dict_record(cls, data: Dict[str, Any], line_no: int) -> Dict[str, Any]:
+        lowered = {str(k).strip().lower(): v for k, v in data.items() if k is not None}
+
+        ts = (
+            lowered.get("time")
+            or lowered.get("timestamp")
+            or lowered.get("timecreated")
+            or lowered.get("timegenerated")
+            or lowered.get("date and time")
+            or lowered.get("datetime")
+            or lowered.get("created_at")
+        )
+        if not ts and (lowered.get("date") or lowered.get("month")):
+            parts = [str(lowered.get(k)).strip() for k in ("month", "date", "time") if lowered.get(k)]
+            ts = " ".join(parts)
+        ts = ts or "N/A"
+
+        svc = (
+            lowered.get("service")
+            or lowered.get("app")
+            or lowered.get("name")
+            or lowered.get("source")
+            or lowered.get("provider")
+            or lowered.get("providername")
+            or lowered.get("component")
+            or lowered.get("computer")
+            or lowered.get("machinename")
+            or lowered.get("node")
+            or lowered.get("host")
+            or "unknown-service"
+        )
+
+        msg = (
+            lowered.get("msg")
+            or lowered.get("message")
+            or lowered.get("content")
+            or lowered.get("description")
+            or lowered.get("eventtemplate")
+            or lowered.get("log")
+            or lowered.get("raw_log")
+            or ""
+        )
+        msg_str = str(msg).strip()
+        if not msg_str:
+            # Synthesize summary for Kaggle tabular telemetry/anomaly CSV rows
+            skip_keys = {"line_no", "lineid", "id", "time", "timestamp", "date", "month", "service", "host"}
+            kv_pairs = [f"{k}={v}" for k, v in lowered.items() if k not in skip_keys and str(v).strip() != ""]
+            msg_str = ", ".join(kv_pairs[:10]) if kv_pairs else json.dumps(data, default=str)
+
+        ev_id = lowered.get("eventid") if lowered.get("eventid") not in (None, "") else lowered.get("event_id")
+        if ev_id not in (None, "") and f"eventid {ev_id}".lower() not in msg_str.lower():
+            msg_str = f"[EventID {ev_id}] {msg_str}"
+
+        raw_lvl = lowered.get("level") or lowered.get("severity") or lowered.get("entrytype") or lowered.get("levelname")
+        label_val = (
+            lowered.get("label")
+            or lowered.get("is_anomaly")
+            or lowered.get("anomaly")
+            or lowered.get("attack")
+            or lowered.get("status")
+        )
+        norm_lvl = cls._normalize_level(raw_lvl, msg_str, label_val)
+
+        raw_line_no = lowered.get("line_no") or lowered.get("lineid") or line_no
+        try:
+            parsed_line_no = int(raw_line_no)
+        except Exception:
+            parsed_line_no = line_no
+
         return {
-            "line_no": int(lowered.get("line_no") or line_no),
+            "line_no": parsed_line_no,
             "timestamp": str(ts),
-            "level": str(lvl).upper(),
+            "level": norm_lvl,
             "service": str(svc),
-            "message": str(msg),
+            "message": msg_str,
             "raw_line": json.dumps(data, default=str),
         }
 
     @classmethod
     def parse_text(cls, log_content: str) -> pd.DataFrame:
-        """Parses multi-line text, JSON arrays, or CSV logs into a structured pandas DataFrame."""
+        """Parses multi-line text, JSON arrays, or CSV logs (including Kaggle Event/LogHub CSVs) into a DataFrame."""
         stripped = (log_content or "").strip()
         if not stripped:
             return pd.DataFrame(columns=["line_no", "timestamp", "level", "service", "message", "raw_line"])
@@ -169,13 +276,19 @@ class InfrastructureLogParser:
             except Exception:
                 records = []
 
-        # Support CSV log files (e.g. exported live/parsed logs)
+        # Support CSV log & Kaggle dataset files (Standard, Windows Event Log, LogHub, Telemetry CSVs)
+        csv_signal_cols = {
+            "message", "msg", "content", "description", "eventtemplate", "raw_log",
+            "timecreated", "eventid", "event_id", "component", "source", "provider",
+            "level", "severity", "label", "is_anomaly", "anomaly", "attack", "cpu",
+        }
         if not records:
             first_line = stripped.splitlines()[0].lower()
-            if "," in first_line and any(col in first_line for col in ("message", "msg", "level", "service", "timestamp")):
+            if "," in first_line and any(col in first_line for col in csv_signal_cols):
                 try:
                     reader = csv.DictReader(io.StringIO(stripped))
-                    if reader.fieldnames and any(str(f).strip().lower() in ("message", "msg") for f in reader.fieldnames):
+                    hdrs = {str(f).strip().lower() for f in (reader.fieldnames or [])}
+                    if hdrs & csv_signal_cols:
                         for idx, row in enumerate(reader, start=1):
                             records.append(cls._normalize_dict_record(row, idx))
                 except Exception:

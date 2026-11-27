@@ -327,7 +327,9 @@ def render_semantic_search_tab(vector_store, df: pd.DataFrame):
 
 
 def render_upload_tab(parser_cls):
-    """Renders log upload and built-in sample log loader."""
+    """Renders built-in trace loader, Kaggle dataset importer, and CSV/log file uploader."""
+    from src.kaggle_loader import KAGGLE_DATASETS, download_kaggle_dataset
+
     with st.expander("⚡ Load Sample Infrastructure Trace", expanded=True):
         col_s1, col_s2 = st.columns(2)
         if col_s1.button("🔥 Production Incident Trace", use_container_width=True):
@@ -343,7 +345,52 @@ def render_upload_tab(parser_cls):
                 st.session_state["active_file_name"] = "normal_operations.log"
                 st.rerun()
 
-    uploaded_file = st.file_uploader("Upload Log File (.log, .txt, .csv, .json)", type=["log", "txt", "csv", "json"])
+    with st.expander("📊 Kaggle.com Datasets (Import URL or Download CSV)", expanded=False):
+        st.caption(
+            "Select a Kaggle infrastructure/log dataset below, or paste any Kaggle URL/slug to import directly "
+            "(also supports dragging downloaded Kaggle `.csv` / `.log` files into the uploader below)."
+        )
+        preset_cols = st.columns(2)
+        for idx, ds in enumerate(KAGGLE_DATASETS):
+            with preset_cols[idx % 2]:
+                st.markdown(f"**[{ds['title']}]({ds['url']})** — `{ds['slug']}`")
+                st.caption(ds["focus"])
+                if st.button(f"Select `{ds['slug']}`", key=f"kag_sel_{idx}", use_container_width=True):
+                    st.session_state["kaggle_slug_input"] = ds["slug"]
+
+        kc1, kc2 = st.columns([3, 1])
+        kag_slug = kc1.text_input(
+            "Kaggle Dataset URL or Slug",
+            value=st.session_state.get("kaggle_slug_input", KAGGLE_DATASETS[0]["slug"]),
+            placeholder="owner/dataset or https://www.kaggle.com/datasets/owner/dataset",
+            key="kaggle_slug_field",
+        )
+        kag_rows = kc2.number_input("Max Rows", min_value=100, max_value=10000, value=1500, step=100, key="kaggle_max_rows")
+
+        ka1, ka2 = st.columns(2)
+        kag_user = ka1.text_input("Kaggle Username (optional if public/env set)", value="", key="kaggle_user_in")
+        kag_key = ka2.text_input("Kaggle API Key (optional)", value="", type="password", key="kaggle_key_in")
+
+        if st.button("⬇️ Fetch & Load Kaggle Dataset", type="primary", use_container_width=True, key="kaggle_fetch_btn"):
+            with st.spinner(f"Fetching dataset `{kag_slug}` from kaggle.com..."):
+                try:
+                    fname, content = download_kaggle_dataset(
+                        kag_slug,
+                        username=kag_user,
+                        api_key=kag_key,
+                        max_rows=int(kag_rows),
+                    )
+                    st.session_state["raw_log_content"] = content
+                    st.session_state["active_file_name"] = f"kaggle:{fname}"
+                    st.success(f"Loaded Kaggle file `{fname}`!")
+                    st.rerun()
+                except Exception as exc:
+                    st.warning(f"Kaggle import notice: {exc}")
+
+    uploaded_file = st.file_uploader(
+        "Upload Log or Kaggle CSV File (.log, .txt, .csv, .json)",
+        type=["log", "txt", "csv", "json"],
+    )
     if uploaded_file is not None:
         upload_sig = f"{uploaded_file.name}:{uploaded_file.size}"
         if st.session_state.get("last_uploaded_sig") != upload_sig:
