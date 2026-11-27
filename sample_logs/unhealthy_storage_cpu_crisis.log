@@ -1,0 +1,11 @@
+2026-11-27 11:00:02.110 [INFO] [api-gateway] API throughput steady at 920 req/sec.
+2026-11-27 11:00:25.410 [WARN] [storage-node-01] Disk volume /var/lib/postgres reached 91.4% capacity.
+2026-11-27 11:00:50.890 [WARN] [compute-worker-03] CPU utilization throttled at 94.8% load average 16.4.
+2026-11-27 11:01:15.205 [ERROR] [storage-node-01] No space left on device while writing WAL segment /var/lib/postgres/pg_wal.
+2026-11-27 11:01:30.440 [CRITICAL] [db-postgres] FATAL: could not write to file pg_wal/00000001: No space left on device. Disk full.
+2026-11-27 11:01:48.712 [ERROR] [auth-service] SSL certificate verification failed: x509 certificate has expired for internal-idp.local.
+2026-11-27 11:02:05.901 [CRITICAL] [compute-worker-03] High CPU saturation 99.6% causing worker thread starvation and request queue backup.
+2026-11-27 11:02:22.340 [ERROR] [api-gateway] 502 Bad Gateway: upstream timeout waiting for auth-service response after 5000ms.
+2026-11-27 11:02:40.660 [FATAL] [k8s-kubelet] Container storage-writer terminated due to disk full and read-only filesystem remount.
+2026-11-27 11:02:55.120 [CRITICAL] [ingress-gateway] Upstream cluster health check failed: 503 Service Unavailable across 4 endpoints.
+

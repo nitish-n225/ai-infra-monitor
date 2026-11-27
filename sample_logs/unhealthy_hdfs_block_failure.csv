@@ -1,0 +1,10 @@
+Timestamp,Level,Service,Message
+2026-11-27T12:00:01Z,INFO,dfs.DataNode,Receiving block blk_-3544583377289625738 src: /10.251.42.84:50010 dest: /10.251.42.84:50010
+2026-11-27T12:00:04Z,WARN,dfs.DataNode,PacketResponder blk_-3544583377289625738 for block Interrupted
+2026-11-27T12:00:07Z,ERROR,dfs.DataNode,Exception writing block blk_-3544583377289625738 to mirror 10.251.199.19:50010
+2026-11-27T12:00:10Z,ERROR,dfs.DataNode,writeBlock blk_-3544583377289625738 received exception java.io.IOException: Connection reset by peer
+2026-11-27T12:00:12Z,ERROR,dfs.DataNode,PacketResponder blk_-3544583377289625738 Exception java.io.EOFException
+2026-11-27T12:00:15Z,ERROR,dfs.DataNode,Failed to transfer blk_-3544583377289625738 to 10.251.199.19:50010 got java.net.SocketTimeoutException
+2026-11-27T12:00:18Z,CRITICAL,dfs.FSNamesystem,PendingReplicationMonitor timed out block blk_-3544583377289625738
+2026-11-27T12:00:21Z,WARN,dfs.FSDataset,Unexpected error trying to delete block blk_-3544583377289625738 BlockInfo not found in volumeMap
+

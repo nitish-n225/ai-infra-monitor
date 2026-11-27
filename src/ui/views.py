@@ -122,8 +122,6 @@ def render_overview_tab(
                         """,
                         unsafe_allow_html=True,
                     )
-    else:
-        st.info("Upload a log file or load a sample dataset in **Log Intelligence → 📥 Upload Logs & Kaggle** to inspect telemetry.")
 
     st.markdown("---")
     col_chart1, col_chart2 = st.columns(2)

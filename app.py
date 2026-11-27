@@ -298,8 +298,6 @@ def _render_live_assistant_panel():
 
 
 if data_mode == "Overview":
-    if not active_content:
-        st.info("Upload a log file or load a sample trace in **Log Intelligence → 📥 Upload Logs & Kaggle** to analyze traces.")
     render_overview_tab(telemetry_data, parsed_df, health_data, risk_data, ml_analysis=ml_analysis, active_filename=active_filename)
 
 elif data_mode == "Live Monitoring":
@@ -386,14 +384,11 @@ elif data_mode == "Predictive Health":
     st.markdown("#### 📈 Predictive Health & Failure Risk Modeling")
     h_score = float(health_data.get("health_score", 100.0))
     r_score = float(risk_data.get("risk_score", 0.0))
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     with c1:
         render_metric_card("Health Index", f"{h_score}%", f"Condition: {health_data.get('condition', 'Stable')}", health_data.get("color", "#10b981"))
     with c2:
         render_metric_card("Failure Risk Score", f"{r_score}/100", f"Level: {risk_data.get('risk_level', 'LOW')}", "#ef4444" if r_score >= 70 else ("#f59e0b" if r_score >= 30 else "#10b981"))
-    with c3:
-        ml_peak = float(ml_analysis.get("max_anomaly_prob", 0.0)) if ml_analysis else 0.0
-        render_metric_card("Kaggle ML Peak Risk", f"{ml_peak:.1f}%", f"Flagged: {ml_analysis.get('flagged_events', 0) if ml_analysis else 0} events", "#22d3ee")
 
     render_3d_gauge_pair(
         h_score,

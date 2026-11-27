@@ -1,0 +1,8 @@
+TimeCreated,Level,Source,EventID,Message
+2026-11-27T10:00:05Z,Information,Service Control Manager,7036,The Windows Time service entered the running state cleanly.
+2026-11-27T10:00:20Z,Information,Microsoft-Windows-Kernel-General,16,The access history in hive SystemRoot System32 Config SOFTWARE was cleared cleanly.
+2026-11-27T10:00:45Z,Information,Microsoft-Windows-Security-SPP,16384,Successfully scheduled Software Protection service for routine verification.
+2026-11-27T10:01:10Z,Information,ESENT,916,Catalog Database Engine completed scheduled online defragmentation cleanly.
+2026-11-27T10:01:35Z,Information,Microsoft-Windows-FilterManager,6,File System Filter WdFilter loaded successfully on volume C.
+2026-11-27T10:02:00Z,Information,VSS,8224,Volume Shadow Copy Service completed routine checkpoint without errors.
+
